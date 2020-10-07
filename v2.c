@@ -51,10 +51,12 @@ int main()
         return 1;
     }
 
-    ALLEGRO_BITMAP *mysha = al_load_bitmap("mysha.png");
-    if (!mysha)
+    ALLEGRO_BITMAP *alien = al_load_bitmap("alien.png");
+    ALLEGRO_BITMAP *frame = al_load_bitmap("frame.png");
+
+    if (!alien || !frame)
     {
-        puts("couldn't load mysha\n");
+        puts("couldn't load alien\n");
         return 1;
     }
 
@@ -66,7 +68,7 @@ int main()
     bool redraw = true;
     ALLEGRO_EVENT event;
 
-    int x_mysha = 0;
+    int x_alien = 0;
 
     al_start_timer(timer);
     while (1)
@@ -77,15 +79,15 @@ int main()
         {
         case ALLEGRO_EVENT_TIMER:
             // game logic goes here.
-            if (x_mysha >= 0 && x_mysha < 640)
+            if (x_alien >= 0 && x_alien < 640)
             {
-                x_mysha++;
+                x_alien++;
             }
             else
             {
-                x_mysha = 0;
+                x_alien = 0;
             }
-            
+
             redraw = true;
             break;
 
@@ -103,16 +105,20 @@ int main()
 
         if (redraw && al_is_event_queue_empty(queue))
         {
-            al_clear_to_color(al_map_rgb(0, 0, 0));
-            al_draw_text(font, al_map_rgb(255, 255, 255), 0, 0, 0, "Hello world!");
+            al_clear_to_color(al_map_rgb(255, 255, 255));
 
-            al_draw_bitmap(mysha, x_mysha, 100, 0);
+            al_draw_bitmap(frame, 0, 0, 0);
+
+            al_draw_bitmap(alien, x_alien, 10, 0);
 
             al_flip_display();
 
             redraw = false;
         }
     }
+
+    al_destroy_bitmap(alien);
+    al_destroy_bitmap(frame);
 
     al_destroy_font(font);
     al_destroy_display(disp);

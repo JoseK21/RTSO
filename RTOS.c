@@ -25,14 +25,14 @@ int main()
         printf("couldn't initialize image addon\n");
         return 1;
     }
-    ALLEGRO_BITMAP *mysha = al_load_bitmap("mysha.png");
-    if (!mysha)
+    ALLEGRO_BITMAP *alien = al_load_bitmap("alien.png");
+    if (!alien)
     {
-        puts("couldn't load mysha\n");
+        puts("couldn't load alien\n");
         return 1;
     }
 
-    int x_mysha = 0;
+    int x_alien = 0;
     al_start_timer(timer);
     while (1)
     {
@@ -51,7 +51,7 @@ int main()
             al_clear_to_color(al_map_rgb(0, 0, 0));                                 // Clears the screen to black
             al_draw_text(font, al_map_rgb(255, 255, 255), 0, 0, 0, "Hello world!"); // Draws Hello world! in white to the top-left corner of the window
 
-            al_draw_bitmap(mysha, 100, 100, 0);
+            al_draw_bitmap(alien, 100, 100, 0);
 
             al_flip_display();                                                      // Commits the result
 
@@ -60,7 +60,7 @@ int main()
     }
 
     // Shutdown
-    al_destroy_bitmap(mysha);
+    al_destroy_bitmap(alien);
     al_destroy_font(font);
     al_destroy_display(disp);
     al_destroy_timer(timer);
