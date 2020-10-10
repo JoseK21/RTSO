@@ -1,15 +1,13 @@
+INCLUDE_DIR = ./include
+BIND_DIR = ./bin
 ALLEGRO_FLAGS := $(shell pkg-config allegro-5 allegro_font-5 allegro_image-5 --libs --cflags)
 CC = gcc
-FILE = RTOS
+APP_NAME = RTOS
 
 all: buildTemApp
 
-buildTemApp: $(FILE).c
-		$(CC) $(FILE).c -o $(FILE) $(ALLEGRO_FLAGS)
-		./$(FILE)
+buildTemApp: $(APP_NAME).c
+		gcc -I $(INCLUDE_DIR) $(APP_NAME).c -o $(BIND_DIR)/$(APP_NAME) $(ALLEGRO_FLAGS) 
 
 clean:
-	rm $(FILE)
-
-
-# gcc v2.c -o v2 $(pkg-config allegro-5 allegro_font-5 allegro_image-5  --libs --cflags)
+	rm $(BIND_DIR)/$(APP_NAME)
