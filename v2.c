@@ -5,6 +5,37 @@
 
 int main()
 {
+    int maze_matrix[19][19] = {
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    };
+
+    for (int c = 0; c < 19; c++)
+    {
+        for (int d = 0; d < 19; d++)
+        {            
+            printf("%d\t", maze_matrix[c][d]);
+        }
+        printf("\n");
+    }
+   // return 0;
     if (!al_init())
     {
         printf("couldn't initialize allegro\n");
@@ -37,7 +68,7 @@ int main()
         return 1;
     }
 
-    ALLEGRO_DISPLAY *disp = al_create_display(640, 480);
+    ALLEGRO_DISPLAY *disp = al_create_display(608, 608);
     if (!disp)
     {
         printf("couldn't initialize display\n");
@@ -51,10 +82,10 @@ int main()
         return 1;
     }
 
-    ALLEGRO_BITMAP *alien = al_load_bitmap("alien.png");
-    ALLEGRO_BITMAP *frame = al_load_bitmap("frame.png");
+    ALLEGRO_BITMAP *alien = al_load_bitmap("src/alien.png");
+    ALLEGRO_BITMAP *maze = al_load_bitmap("src/maze.png");
 
-    if (!alien || !frame)
+    if (!alien || !maze)
     {
         puts("couldn't load alien\n");
         return 1;
@@ -79,7 +110,7 @@ int main()
         {
         case ALLEGRO_EVENT_TIMER:
             // game logic goes here.
-            if (x_alien >= 0 && x_alien < 640)
+            if (x_alien >= 0 && x_alien < 608)
             {
                 x_alien++;
             }
@@ -107,9 +138,9 @@ int main()
         {
             al_clear_to_color(al_map_rgb(255, 255, 255));
 
-            al_draw_bitmap(frame, 0, 0, 0);
+            al_draw_bitmap(maze, 0, 0, 0);
 
-            al_draw_bitmap(alien, x_alien, 10, 0);
+            al_draw_bitmap(alien, x_alien, 32 * 7, 0);
 
             al_flip_display();
 
@@ -118,7 +149,7 @@ int main()
     }
 
     al_destroy_bitmap(alien);
-    al_destroy_bitmap(frame);
+    al_destroy_bitmap(maze);
 
     al_destroy_font(font);
     al_destroy_display(disp);
