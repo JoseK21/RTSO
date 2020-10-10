@@ -7,14 +7,14 @@
 int main()
 {
 
-    for (int c = 0; c < M_ROW; c++)
+    /* for (int c = 0; c < M_ROW; c++)
     {
         for (int d = 0; d < M_COL; d++)
         {
             printf("%d\t", MAZE_MATRIX[c][d]);
         }
         printf("\n");
-    }
+    } */
     // return 0;
     if (!al_init())
     {
