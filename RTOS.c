@@ -1,11 +1,45 @@
 #include <stdio.h>
+#include <string.h>
 #include <allegro5/allegro5.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_image.h>
 #include <matrix.h>
 
-int main()
+int __algorithm;
+
+int parameterAlgorithm(int argc, char *argv[])
 {
+    if (argc != 2)
+    {
+        printf("Warnig, only one input parameter must be provided\n");
+        return 0;
+    }
+
+    if (!strcmp(argv[1], "RM"))
+    {
+        printf("RM\n");
+        __algorithm = 0;
+        return 1;
+    }
+    else if (!strcmp(argv[1], "EDF"))
+    {
+        __algorithm = 1;
+        printf("EDF\n");
+        return 1;
+    }
+
+    else
+    {
+        printf("Algorithm error\n");
+        return 0;
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    if (!parameterAlgorithm(argc, argv) ) {
+        return 0;
+    }
 
     /* for (int c = 0; c < M_ROW; c++)
     {
@@ -16,6 +50,7 @@ int main()
         printf("\n");
     } */
     // return 0;
+
     if (!al_init())
     {
         printf("couldn't initialize allegro\n");
