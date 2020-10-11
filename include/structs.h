@@ -4,9 +4,10 @@
 //Alien struct//
 typedef struct
 {
-    float energyLevel;        // Speed
-    float period;         // Weight
-
+    float energyLevel; // Speed
+    float period;      // Weight
+    int x;
+    int y;
 } alien;
 
 #endif

@@ -4,6 +4,7 @@
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_image.h>
 #include <matrix.h>
+#include <signal.h>
 
 int __algorithm;
 
@@ -11,7 +12,7 @@ int parameterAlgorithm(int argc, char *argv[])
 {
     if (argc != 2)
     {
-        printf("Warnig, only one input parameter must be provided\n");
+        printf("Warning!, only one input parameter must be provided\n");
         return 0;
     }
 
@@ -35,9 +36,27 @@ int parameterAlgorithm(int argc, char *argv[])
     }
 }
 
+int createProcess(void)
+{
+    if (fork() == 0)
+    {
+        int child_id = getpid();
+        printf("\n[son] pid %d from [parent] pid %d\n", child_id, getppid());
+       /*  wait(NULL); */ 
+        return child_id;
+    }
+    return -1;
+}
+
+void kill_child(int child_pid)
+{
+    kill(child_pid, SIGKILL);
+}
+
 int main(int argc, char *argv[])
 {
-    if (!parameterAlgorithm(argc, argv) ) {
+    if (!parameterAlgorithm(argc, argv))
+    {
         return 0;
     }
 
@@ -50,6 +69,17 @@ int main(int argc, char *argv[])
         printf("\n");
     } */
     // return 0;
+
+/*     int p1 = createProcess();
+    int p2 = createProcess();
+    int p3 = createProcess();
+
+
+    if (p1 == -1 || p2 == -1)
+    {
+        return 0;
+    } */
+    
 
     if (!al_init())
     {
@@ -124,6 +154,7 @@ int main(int argc, char *argv[])
         switch (event.type)
         {
         case ALLEGRO_EVENT_TIMER:
+
             // game logic goes here.
             if (x_alien >= 0 && x_alien < 608)
             {
