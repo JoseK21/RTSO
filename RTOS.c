@@ -4,6 +4,7 @@
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_image.h>
 #include <matrix.h>
+#include <structs.h>
 #include <signal.h>
 
 int __algorithm;
@@ -36,13 +37,26 @@ int parameterAlgorithm(int argc, char *argv[])
     }
 }
 
-int createProcess(void)
+int createProcessMartian(float energyLevel, float period)
 {
     if (fork() == 0)
     {
+        pid_t ppidC = getppid();
         int child_id = getpid();
-        printf("\n[son] pid %d from [parent] pid %d\n", child_id, getppid());
-       /*  wait(NULL); */ 
+        printf("\n[son] pid %d from [parent] pid %d\n", child_id, ppidC);
+        martian *_martian = malloc(sizeof(martian));
+
+        _martian->energyLevel = energyLevel;
+        _martian->period = period;
+        _martian->x = 0;
+        _martian->y = 224;
+        _martian->pid = child_id;
+
+        int status;
+        ppidC = wait(&status);
+        printf("PADRE>> PID: %d, hijo de PID = %d terminado, st = %d \n", getpid(), ppidC, WEXITSTATUS(status));
+
+        /*  wait(NULL); */
         return child_id;
     }
     return -1;
@@ -53,6 +67,7 @@ void kill_child(int child_pid)
     kill(child_pid, SIGKILL);
 }
 
+/* -------------- MAIN ------------- */
 int main(int argc, char *argv[])
 {
     if (!parameterAlgorithm(argc, argv))
@@ -70,7 +85,7 @@ int main(int argc, char *argv[])
     } */
     // return 0;
 
-/*     int p1 = createProcess();
+    /*     int p1 = createProcess();
     int p2 = createProcess();
     int p3 = createProcess();
 
@@ -79,7 +94,6 @@ int main(int argc, char *argv[])
     {
         return 0;
     } */
-    
 
     if (!al_init())
     {
@@ -171,6 +185,9 @@ int main(int argc, char *argv[])
         case ALLEGRO_EVENT_KEY_DOWN:
             if (event.keyboard.keycode == ALLEGRO_KEY_X)
                 done = true;
+
+            if (event.keyboard.keycode == ALLEGRO_KEY_C)
+                createProcessMartian(2.0, 6.8);
             break;
         case ALLEGRO_EVENT_DISPLAY_CLOSE:
             done = true;
@@ -186,7 +203,7 @@ int main(int argc, char *argv[])
 
             al_draw_bitmap(maze, 0, 0, 0);
 
-            al_draw_bitmap(alien, x_alien, 32 * 7, 0);
+            al_draw_bitmap(alien, x_alien, 224, 0);
 
             al_flip_display();
 

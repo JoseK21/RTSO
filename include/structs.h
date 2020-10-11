@@ -1,13 +1,14 @@
 #ifndef _STRUCT_H
 #define _STRUCT_H
 
-//Alien struct//
+//Martian struct//
 typedef struct
 {
-    float energyLevel; // Speed
+    int x;             // Position x
+    int y;             // Position y
+    int pid;           // Process Id
     float period;      // Weight
-    int x;
-    int y;
-} alien;
+    float energyLevel; // Speed
+} martian;
 
 #endif
