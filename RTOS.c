@@ -8,6 +8,8 @@
 #include <signal.h>
 
 int __algorithm;
+int __numberProcess;
+int __PPID;
 
 int parameterAlgorithm(int argc, char *argv[])
 {
@@ -41,28 +43,32 @@ int createProcessMartian(float energyLevel, float period)
 {
     if (fork() == 0)
     {
-        pid_t ppidC = getppid();
-        int child_id = getpid();
+        pid_t ppidC = getppid(); // ID de proceso padre
+        __PPID = ppidC;
+        int child_id = getpid(); // ID de proceso hijo - creado
         printf("\n[son] pid %d from [parent] pid %d\n", child_id, ppidC);
-        martian *_martian = malloc(sizeof(martian));
+        martian *_martian = malloc(sizeof(martian)); // Reserva el espacio de memoria para el marciano
 
+        /* Crea el marciano */
         _martian->energyLevel = energyLevel;
         _martian->period = period;
         _martian->x = 0;
         _martian->y = 224;
         _martian->pid = child_id;
 
+        __numberProcess = __numberProcess + 1; // Incrementa la cantidad de procesos creados
+
         int status;
         ppidC = wait(&status);
         printf("PADRE>> PID: %d, hijo de PID = %d terminado, st = %d \n", getpid(), ppidC, WEXITSTATUS(status));
 
-        /*  wait(NULL); */
+        wait(NULL);
         return child_id;
     }
     return -1;
 }
 
-void kill_child(int child_pid)
+void kill_process(int child_pid)
 {
     kill(child_pid, SIGKILL);
 }
@@ -184,12 +190,21 @@ int main(int argc, char *argv[])
 
         case ALLEGRO_EVENT_KEY_DOWN:
             if (event.keyboard.keycode == ALLEGRO_KEY_X)
-                done = true;
+            {
+                kill_process(__PPID);
+                /* int num = 321;
+                char snum[5];
 
+                // convert 123 to string [buf]
+                itoa(num, snum, 10);
+                system("kill -9 "); */
+                done = true;
+            }
             if (event.keyboard.keycode == ALLEGRO_KEY_C)
                 createProcessMartian(2.0, 6.8);
             break;
         case ALLEGRO_EVENT_DISPLAY_CLOSE:
+            kill_process(__PPID);
             done = true;
             break;
         }
