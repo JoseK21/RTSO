@@ -1,7 +1,7 @@
 INCLUDE_DIR = ./include
 BIND_DIR = ./bin
 
-ALLEGRO_FLAGS := $(shell pkg-config allegro-5 allegro_font-5 allegro_image-5 --libs --cflags)
+ALLEGRO_FLAGS := $(shell pkg-config allegro-5 allegro_font-5 allegro_image-5 allegro_dialog-5 --libs --cflags)
 
 CC = gcc
 APP_NAME = RTOS
