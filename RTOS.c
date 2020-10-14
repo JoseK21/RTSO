@@ -218,7 +218,12 @@ int main(int argc, char *argv[])
 
             al_draw_bitmap(maze, 0, 0, 0);
 
-            al_draw_bitmap(alien, x_alien, 224, 0);
+            al_draw_bitmap(alien, x_alien + 50, 224, 0);
+            al_draw_bitmap(alien, x_alien + 100, 224, 0);
+            al_draw_bitmap(alien, x_alien + 150, 224, 0);
+            al_draw_bitmap(alien, x_alien + 200, 224, 0);
+            al_draw_bitmap(alien, x_alien + 250, 224, 0);
+
 
             al_flip_display();
 
