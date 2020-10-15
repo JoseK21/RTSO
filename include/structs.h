@@ -2,13 +2,13 @@
 #define _STRUCT_H
 
 //Martian struct//
-typedef struct
-{
-    int x;             // Position x
-    int y;             // Position y
-    int pid;           // Process Id
-    float period;      // Weight
-    float energyLevel; // Speed
+typedef struct mnodo
+{                               //mnodo es el nombre de la estructura
+    int x;                      // Position x
+    int y;                      // Position y
+    float period;               // Weight
+    float energy;               // Speed
+    struct mnodo *next_martian; //El puntero siguiente para recorrer la lista enlazada
 } martian;
 
 #endif
