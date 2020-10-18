@@ -8,6 +8,7 @@ typedef struct mnodo
     int y;                      // Position y
     float period;               // Weight
     float energy;               // Speed
+    pthread_t id;               // Thread Id
     struct mnodo *next_martian; //El puntero siguiente para recorrer la lista enlazada
 } martian;
 

@@ -7,12 +7,15 @@
 #include <matrix.h>
 #include <structs.h>
 #include <signal.h>
+#include <pthread.h>
 
 int __algorithm;
 int __numberProcess;
 int __PPID;
 
 typedef martian *tpuntero; //Puntero al tipo de dato martian para no utilizar punteros de punteros
+
+martian *M;
 
 int parameterAlgorithm(int argc, char *argv[])
 {
@@ -41,24 +44,73 @@ int parameterAlgorithm(int argc, char *argv[])
 
 /* martian *_martian = malloc(sizeof(martian)); // Reserva el espacio de memoria para el marciano */
 /* Lista */
-
-void insertarEnLista(tpuntero *node_martian, int energy_, int period_)
+int moveMartian(void *param)
 {
-    tpuntero new_martian;                  //Creamos un nuevo nodo
-    new_martian = malloc(sizeof(martian)); //Utilizamos malloc para reservar memoria para ese nodo
-    new_martian->energy = energy_;         //Le asignamos el valor ingresado por pantalla a ese nodo
-    new_martian->period = period_;         //Le asignamos el valor ingresado por pantalla a ese nodo
-    new_martian->next_martian = *node_martian;      //Le asignamos al siguiente el valor de cabeza
-    *node_martian = new_martian;           //Cabeza pasa a ser el ultimo nodo agregado
+    //martian thread_martian = *((martian *)arg); // Casteo de void a martian
+    martian *thread_martian = (martian *)param;
+
+    printf("El hilo inicia....");
+    printf("\n Energia : %f", thread_martian->energy);
+
+    return 0;
+}
+
+void insertarEnLista(tpuntero *node_martian, pthread_t threadID, int energy_, int period_)
+{
+    tpuntero new_martian;                      //Creamos un nuevo nodo
+    new_martian = malloc(sizeof(martian));     //Utilizamos malloc para reservar memoria para ese nodo
+    new_martian->energy = energy_;             //Le asignamos el valor ingresado por pantalla a ese nodo
+    new_martian->period = period_;             //Le asignamos el valor ingresado por pantalla a ese nodo
+    new_martian->x = 0;                        //Le asignamos el valor ingresado por pantalla a ese nodo
+    new_martian->y = 224;                      //Le asignamos el valor ingresado por pantalla a ese nodo
+    new_martian->id = threadID;                //Le asignamos el id del thread correspondiente
+    new_martian->next_martian = *node_martian; //Le asignamos al siguiente el valor de cabeza
+    *node_martian = new_martian;               //Cabeza pasa a ser el ultimo nodo agregado
+
+    // return threadID;
 }
 
 void imprimirLista(tpuntero node)
 {
     while (node != NULL)
-    {                                                                    //Mientras node no sea NULL
-        printf("\nEnergy: %f  -  Period: %f\n", node->energy, node->period); //Imprimimos el valor del nodo
-        node = node->next_martian;                                                //Pasamos al siguiente nodo
+    {                                                                                                         //Mientras node no sea NULL
+        printf("\n ImprimirLista : %ld - Energy: %f  -  Period: %f\n", node->id, node->energy, node->period); //Imprimimos el valor del nodo
+        node = node->next_martian;                                                                            //Pasamos al siguiente nodo
     }
+}
+
+martian *getMartianById(tpuntero node, pthread_t threadID)
+{
+    martian *temp = malloc(sizeof(martian));
+    while (node != NULL)
+    {
+        if (node->id == threadID)
+        {
+            temp = node;
+            break;
+        }
+        node = node->next_martian; //Pasamos al siguiente nodo
+    }
+    return temp;
+}
+
+void *move_martian_thread(void *data)
+{
+    //martian *struct_ptr = (martian *)data;
+    //printf("index: %d  |  value: %d | energy: %f  |  period: %f \n", ((martian *)data)->x, struct_ptr->y, struct_ptr->energy, struct_ptr->period); //Now use 'struct_ptr->index', 'struct_ptr->value' as you wish
+
+    printf("!!!!!energy: %f  \n", ((martian *)data)->energy); //Now use 'struct_ptr->index', 'struct_ptr->value' as you wish
+}
+
+int tamanoLista(tpuntero node)
+{
+    int r = 0;
+    while (node != NULL)
+    { //Mientras node no sea NULL
+        r++;
+        node = node->next_martian; //Pasamos al siguiente nodo
+    }
+    return r;
 }
 
 void borrarLista(tpuntero *node_martian)
@@ -66,12 +118,13 @@ void borrarLista(tpuntero *node_martian)
     tpuntero node_temp; //Puntero auxiliar para eliminar correctamente la lista
 
     while (*node_martian != NULL)
-    {                                         //Mientras node_martian no sea NULL
-        node_temp = *node_martian;               //Actual toma el valor de node_martian
+    {                                                  //Mientras node_martian no sea NULL
+        node_temp = *node_martian;                     //Actual toma el valor de node_martian
         *node_martian = (*node_martian)->next_martian; //Cabeza avanza 1 posicion en la lista
-        free(node_temp);                         //Se libera la memoria de la posicion de Actual (el primer nodo), y node_martian queda apuntando al que ahora es el primero
+        free(node_temp);                               //Se libera la memoria de la posicion de Actual (el primer nodo), y node_martian queda apuntando al que ahora es el primero
     }
 }
+
 /* -------------- MAIN ------------- */
 int main(int argc, char *argv[])
 {
@@ -175,6 +228,13 @@ int main(int argc, char *argv[])
         case ALLEGRO_EVENT_TIMER:
 
             // game logic goes here.
+
+            /* if (0 != pthread_create(&threadID, NULL, move_martian_thread, &get_m))
+            {
+                printf("ERROR CREATE THREAD\n");
+                return -1;
+            }
+            pthread_join(threadID, NULL); */
             if (x_alien >= 0 && x_alien < 608)
             {
                 x_alien++;
@@ -183,6 +243,14 @@ int main(int argc, char *argv[])
             {
                 x_alien = 0;
             }
+
+            tpuntero tem = node_martian;
+
+           /*  while (tem != NULL)
+            {                                                                                              //Mientras tem no sea NULL
+                printf("\n WHILE : %ld - Energy: %f  -  Period: %f\n", tem->id, tem->energy, tem->period); //Imprimimos el valor del nodo
+                tem = tem->next_martian;                                                                   //Pasamos al siguiente nodo
+            } */
 
             redraw = true;
             break;
@@ -197,6 +265,12 @@ int main(int argc, char *argv[])
                 printf("\nSe imprime la lista cargada: ");
                 imprimirLista(node_martian);
             }
+            if (event.keyboard.keycode == ALLEGRO_KEY_J)
+            {
+                printf("\nLeer por ID ");
+                martian *get = getMartianById(node_martian, 1);
+                printf("\n]]]]]] %ld - Energy: %f  -  Period: %f\n", get->id, get->energy, get->period); //Imprimimos el valor del nodo
+            }
             if (event.keyboard.keycode == ALLEGRO_KEY_ENTER)
             {
                 if (new_martian == 1) // Deshabilita la creacion de marcianos
@@ -204,9 +278,16 @@ int main(int argc, char *argv[])
 
                     if (energy != 0 && period != 0)
                     {
-                        /* Create threat */
                         printf("Create Hilo con data...\n");
-                        insertarEnLista(&node_martian, energy, period);
+
+                        int t = tamanoLista(node_martian);
+                        pthread_t threadID = t + 1;
+
+                        insertarEnLista(&node_martian, threadID, energy, period);
+                        martian *get_m = getMartianById(node_martian, threadID);
+                        printf("\nDATOS OBTENIDO DEL GET %ld - Energy: %f  -  Period: %f\n", get_m->id, get_m->energy, get_m->period); //Imprimimos el valor del nodo
+
+                        pthread_create(&threadID, NULL, move_martian_thread, (void *)get_m);
                     }
                     else
                     {
@@ -276,8 +357,6 @@ int main(int argc, char *argv[])
                 al_draw_text(font, al_map_rgb(178, 120, 211), 108, 10, 0, "Period: ");
                 al_draw_text(font, al_map_rgb(255, 255, 255), 170, 10, 0, str_period);
                 free(str_period);
-
-                /* Meter Marciano a lista */
             }
 
             al_flip_display();
