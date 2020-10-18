@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <allegro5/allegro.h>
+#include <allegro5/allegro_font.h>
+#include <allegro5/allegro_image.h>
 #include <stdbool.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -23,7 +25,7 @@ typedef struct
   .cond = NULL, .posiX = 0, .posiY = 0, \  
      .modifyWhich = '\0', \
   .ready = false \  
-        } \  
+         } \  
  )
 
 DATA *DATA_new(void);
@@ -34,9 +36,9 @@ void DATA_delete(DATA *self);
 // ---------------------------------------------------------------------------
 // Header of MAIN module
 // ---------------------------------------------------------------------------
-const float FPS = 30;
-const int SCREEN_W = 640;
-const int SCREEN_H = 480;
+const float FPS = 30.0;
+const int SCREEN_W = 608;
+const int SCREEN_H = 608;
 const int BOUNCER_SIZE = 32;
 #define BLACK (al_map_rgb(0, 0, 0))
 #define MAGENTA (al_map_rgb(255, 0, 255))
@@ -76,7 +78,7 @@ int main()
     // Initialize Allegro, mouse, timer, display and bitmap
     // XXX - skimping on Allegro error-checking
     al_init();
-    al_install_mouse();
+    /* al_install_mouse(); */
     if (!al_install_keyboard())
     {
         printf("couldn't initialize keyboard\n");
@@ -90,33 +92,36 @@ int main()
 
     ALLEGRO_TIMER *timer = al_create_timer(1.0 / FPS);
     ALLEGRO_DISPLAY *display = al_create_display(SCREEN_W, SCREEN_H);
-    ALLEGRO_BITMAP *bouncer = al_create_bitmap(BOUNCER_SIZE, BOUNCER_SIZE);
-    
+    ALLEGRO_BITMAP *bouncer = al_load_bitmap("../src/alien.png");
+    ALLEGRO_BITMAP *maze = al_load_bitmap("../src/maze.png");
+
     al_set_target_bitmap(bouncer);
-    al_clear_to_color(MAGENTA);
     al_set_target_bitmap(al_get_backbuffer(display));
-    
+
     ALLEGRO_EVENT_QUEUE *event_queue = al_create_event_queue();
     al_register_event_source(event_queue, al_get_display_event_source(display));
     al_register_event_source(event_queue, al_get_timer_event_source(timer));
-    al_register_event_source(event_queue, al_get_mouse_event_source());
+    /* al_register_event_source(event_queue, al_get_mouse_event_source()); */
     al_register_event_source(event_queue, al_get_keyboard_event_source());
     al_clear_to_color(BLACK);
     al_flip_display();
-    
-    DATA *data = DATA_new();
+
+    DATA *data = DATA_new(); // Crear nuevo marciano
+    DATA *data1 = DATA_new(); // Crear nuevo marciano
+
 
     // Start timer
     al_start_timer(timer);
 
     // Set shared DATA
-    al_lock_mutex(data->mutex);
-    data->modifyWhich = 'X';
+    //al_lock_mutex(data->mutex);
+    data->modifyWhich = 'X'; // segundos a ejecutar ' energia
     data->ready = false;
-    al_unlock_mutex(data->mutex);
+   // al_unlock_mutex(data->mutex);
 
     // Initialize and start thread_1
     ALLEGRO_THREAD *thread_1 = al_create_thread(Func_Thread, data);
+
     al_start_thread(thread_1);
     al_lock_mutex(data->mutex);
     while (!data->ready)
@@ -126,27 +131,33 @@ int main()
     al_unlock_mutex(data->mutex);
 
     // Set shared DATA
-    al_lock_mutex(data->mutex);
-    data->modifyWhich = 'Y';
-    data->ready = false;
-    al_unlock_mutex(data->mutex);
+   // al_lock_mutex(data1->mutex);
+    data1->modifyWhich = 'Y';
+    data1->ready = false;
+  //  al_unlock_mutex(data1->mutex);
+
+
 
     // Initialize and start thread_2
-/*     ALLEGRO_THREAD *thread_2 = al_create_thread(Func_Thread, data);
+    ALLEGRO_THREAD *thread_2 = al_create_thread(Func_Thread, data1);
     al_start_thread(thread_2);
-    al_lock_mutex(data->mutex);
-    while (!data->ready)
+    al_lock_mutex(data1->mutex);
+    while (!data1->ready)
     {
-        al_wait_cond(data->cond, data->mutex);
+        al_wait_cond(data1->cond, data1->mutex);
     }
-    al_unlock_mutex(data->mutex); */
+    al_unlock_mutex(data1->mutex);
 
     // Event loop
     int code = CODE_CONTINUE;
     while (code == CODE_CONTINUE)
     {
+        al_draw_bitmap(maze, 0, 0, 0);
         if (RedrawIsReady() && al_is_event_queue_empty(event_queue))
-            RedrawDo(data, bouncer);
+            RedrawDo(data, bouncer, maze);
+            RedrawDo(data1, bouncer, maze);
+            al_flip_display();
+
         ALLEGRO_EVENT ev;
         al_wait_for_event(event_queue, &ev);
         code = HandleEvent(ev);
@@ -154,7 +165,7 @@ int main()
 
     // Clean up resources and exit with appropriate code
     al_destroy_thread(thread_1);
-    //al_destroy_thread(thread_2);
+    al_destroy_thread(thread_2);
     al_destroy_bitmap(bouncer);
     al_destroy_timer(timer);
     al_destroy_display(display);
@@ -217,14 +228,16 @@ code HandleEvent(ALLEGRO_EVENT ev)
     return CODE_CONTINUE;
 }
 
-void RedrawDo(DATA *data, ALLEGRO_BITMAP *bouncer)
+void RedrawDo(DATA *data, ALLEGRO_BITMAP *bouncer, ALLEGRO_BITMAP *maze)
 {
+    //al_clear_to_color(al_map_rgb(0, 0, 0));
+    
     al_lock_mutex(data->mutex);
     float X = data->posiX;
     float Y = data->posiY;
     al_unlock_mutex(data->mutex);
     al_draw_bitmap(bouncer, X, Y, 0);
-    al_flip_display();
+    //al_flip_display();
 }
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
