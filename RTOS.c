@@ -8,14 +8,17 @@
 #include <structs.h>
 #include <signal.h>
 #include <pthread.h>
+// To use time library of C
+#include <time.h>
 
 int __algorithm;
 int __numberProcess;
 int __PPID;
+ALLEGRO_BITMAP *__image;
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef martian *tpuntero; //Puntero al tipo de dato martian para no utilizar punteros de punteros
-
-martian *M;
 
 int parameterAlgorithm(int argc, char *argv[])
 {
@@ -55,15 +58,16 @@ int moveMartian(void *param)
     return 0;
 }
 
-void insertarEnLista(tpuntero *node_martian, pthread_t threadID, int energy_, int period_)
+void insertarEnLista(tpuntero *node_martian, pthread_t threadID_, int energy_, int period_)
 {
     tpuntero new_martian;                      //Creamos un nuevo nodo
     new_martian = malloc(sizeof(martian));     //Utilizamos malloc para reservar memoria para ese nodo
-    new_martian->energy = energy_;             //Le asignamos el valor ingresado por pantalla a ese nodo
-    new_martian->period = period_;             //Le asignamos el valor ingresado por pantalla a ese nodo
     new_martian->x = 0;                        //Le asignamos el valor ingresado por pantalla a ese nodo
     new_martian->y = 224;                      //Le asignamos el valor ingresado por pantalla a ese nodo
-    new_martian->id = threadID;                //Le asignamos el id del thread correspondiente
+                                               // new_martian->image = image_;               //Le asignamos el valor ingresado por pantalla a ese nodo
+    new_martian->energy = energy_;             //Le asignamos el valor ingresado por pantalla a ese nodo
+    new_martian->period = period_;             //Le asignamos el valor ingresado por pantalla a ese nodo
+    new_martian->id = threadID_;               //Le asignamos el id del thread correspondiente
     new_martian->next_martian = *node_martian; //Le asignamos al siguiente el valor de cabeza
     *node_martian = new_martian;               //Cabeza pasa a ser el ultimo nodo agregado
 
@@ -94,14 +98,60 @@ martian *getMartianById(tpuntero node, pthread_t threadID)
     return temp;
 }
 
+void delay(int number_of_seconds)
+{
+    // Converting time into milli_seconds
+    int milli_seconds = 1000 * number_of_seconds;
+
+    // Storing start time
+    clock_t start_time = clock();
+
+    // looping till required time is not achieved
+    while (clock() < start_time + milli_seconds)
+        ;
+}
+
 void *move_martian_thread(void *data)
 {
     //martian *struct_ptr = (martian *)data;
     //printf("index: %d  |  value: %d | energy: %f  |  period: %f \n", ((martian *)data)->x, struct_ptr->y, struct_ptr->energy, struct_ptr->period); //Now use 'struct_ptr->index', 'struct_ptr->value' as you wish
 
     printf("!!!!!energy: %f  \n", ((martian *)data)->energy); //Now use 'struct_ptr->index', 'struct_ptr->value' as you wish
+
+    /* for (size_t i = 0; i < 100; i++)
+    {
+        printf("!!!!!x: %d  \n", ((martian *)data)->x); //Now use 'struct_ptr->index', 'struct_ptr->value' as you wish
+        ((martian *)data)->x = ((martian *)data)->x + 1;
+    } */
+
+    int i;
+    for (i = 0; i < 10; i++)
+    {
+        // delay of one second
+        delay(1);
+        printf("%d seconds have passed\n", i + 1);
+    }
+
+    /* for (size_t i = 0; i < 100; i++)
+    { */
+
+    /*     pthread_mutex_lock(&mutex);
+    al_set_target_bitmap(NULL);
+    al_draw_bitmap(__image, 200, 224, 0);
+    pthread_mutex_unlock(&mutex); */
 }
 
+void move(tpuntero node)
+{
+
+    while (node != NULL)
+    { //Mientras tem no sea NULL
+        al_draw_bitmap(__image, node->x + 100, 224, 0);
+
+        printf("\n WHILE : %ld - Energy: %f  -  Period: %f\n", node->id, node->energy, node->period); //Imprimimos el valor del nodo
+        node = node->next_martian;                                                                    //Pasamos al siguiente nodo
+    }
+}
 int tamanoLista(tpuntero node)
 {
     int r = 0;
@@ -183,10 +233,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    ALLEGRO_BITMAP *alien = al_load_bitmap("../src/alien.png");
+    __image = al_load_bitmap("../src/alien.png");
     ALLEGRO_BITMAP *maze = al_load_bitmap("../src/maze.png");
 
-    if (!alien || !maze)
+    if (!__image || !maze)
     {
         puts("couldn't load alien\n");
         return 1;
@@ -205,6 +255,7 @@ int main(int argc, char *argv[])
     int new_martian = 0;
     int energy = 0;
     int period = 0;
+    char snum[5];
 
     /*     int c = al_show_native_message_box(
         disp,
@@ -235,23 +286,8 @@ int main(int argc, char *argv[])
                 return -1;
             }
             pthread_join(threadID, NULL); */
-            if (x_alien >= 0 && x_alien < 608)
-            {
-                x_alien++;
-            }
-            else
-            {
-                x_alien = 0;
-            }
 
-            tpuntero tem = node_martian;
-
-           /*  while (tem != NULL)
-            {                                                                                              //Mientras tem no sea NULL
-                printf("\n WHILE : %ld - Energy: %f  -  Period: %f\n", tem->id, tem->energy, tem->period); //Imprimimos el valor del nodo
-                tem = tem->next_martian;                                                                   //Pasamos al siguiente nodo
-            } */
-
+            /* move(node_martian); */
             redraw = true;
             break;
 
@@ -269,7 +305,7 @@ int main(int argc, char *argv[])
             {
                 printf("\nLeer por ID ");
                 martian *get = getMartianById(node_martian, 1);
-                printf("\n]]]]]] %ld - Energy: %f  -  Period: %f\n", get->id, get->energy, get->period); //Imprimimos el valor del nodo
+                printf("\n]]]]]] %ld - Energy: %f  -  Period: %f - x: %d - y: %d\n", get->id, get->energy, get->period, get->x, get->y); //Imprimimos el valor del nodo
             }
             if (event.keyboard.keycode == ALLEGRO_KEY_ENTER)
             {
@@ -331,40 +367,48 @@ int main(int argc, char *argv[])
 
         if (redraw && al_is_event_queue_empty(queue))
         {
+
             al_clear_to_color(al_map_rgb(255, 255, 255));
+
+            //pthread_mutex_lock(&mutex);
 
             al_draw_bitmap(maze, 0, 0, 0);
 
-            al_draw_bitmap(alien, x_alien + 50, 224, 0);
-            al_draw_bitmap(alien, x_alien + 100, 224, 0);
+            // al_draw_bitmap(__image, 100, 224, 0);
+            /*            
             al_draw_bitmap(alien, x_alien + 150, 224, 0);
             al_draw_bitmap(alien, x_alien + 200, 224, 0);
             al_draw_bitmap(alien, x_alien + 250, 224, 0);
+             */
+
+            while (node_martian != NULL)
+            {
+                al_draw_bitmap(__image, node_martian->x, node_martian->y, 0); //Mientras node no sea NULL
+                sleep(3);
+                node_martian = node_martian->next_martian; //Pasamos al siguiente nodo
+            }
 
             al_draw_text(font, al_map_rgb(178, 178, 178), 460, 10, 0, "ENERGY: ");
             al_draw_text(font, al_map_rgb(178, 178, 178), 520, 10, 0, ">>>>>>>>>>");
 
             if (new_martian)
             {
-                char *str_energy;
-                asprintf(&str_energy, "%i", energy);
+                sprintf(snum, "%d", energy);
                 al_draw_text(font, al_map_rgb(178, 120, 211), 10, 10, 0, "Energy: ");
-                al_draw_text(font, al_map_rgb(255, 255, 255), 70, 10, 0, str_energy);
-                free(str_energy);
+                al_draw_text(font, al_map_rgb(255, 255, 255), 70, 10, 0, snum);
 
-                char *str_period;
-                asprintf(&str_period, "%i", period);
+                sprintf(snum, "%d", period);
                 al_draw_text(font, al_map_rgb(178, 120, 211), 108, 10, 0, "Period: ");
-                al_draw_text(font, al_map_rgb(255, 255, 255), 170, 10, 0, str_period);
-                free(str_period);
+                al_draw_text(font, al_map_rgb(255, 255, 255), 170, 10, 0, snum);
             }
 
             al_flip_display();
+            //pthread_mutex_unlock(&mutex);
             redraw = false;
         }
     }
 
-    al_destroy_bitmap(alien);
+    al_destroy_bitmap(__image);
     al_destroy_bitmap(maze);
 
     al_destroy_font(font);
