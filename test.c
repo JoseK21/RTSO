@@ -66,14 +66,13 @@ int new_martian = 0;
 int energy = 0;
 int period = 0;
 code HandleEvent(ALLEGRO_EVENT ev, tpuntero node_martian);
+
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // Header of REDRAW HANDLER Module
 // ---------------------------------------------------------------------------
 bool REDRAW_IS_READY;
-//void RedrawSetReady(void);
-//void RedrawClearReady(void);
 bool RedrawIsReady(void);
 void RedrawDo(); // to be defined in Implementation of EVENT HANDLER Module
 // ---------------------------------------------------------------------------
@@ -90,11 +89,8 @@ void insertarEnLista(tpuntero *node_martian, DATA *data)
     new_martian->posiX = data->posiX;             //Le asignamos el valor ingresado por pantalla a ese nodo
     new_martian->posiY = data->posiY;             //Le asignamos el valor ingresado por pantalla a ese nodo
     new_martian->ready = data->ready;             //Le asignamos el valor ingresado por pantalla a ese nodo
-
-    new_martian->next_martian = *node_martian; //Le asignamos al siguiente el valor de cabeza
-    *node_martian = new_martian;               //Cabeza pasa a ser el ultimo nodo agregado
-
-    // return threadID;
+    new_martian->next_martian = *node_martian;    //Le asignamos al siguiente el valor de cabeza
+    *node_martian = new_martian;                  //Cabeza pasa a ser el ultimo nodo agregado
 }
 
 void imprimirLista(tpuntero node)
@@ -103,6 +99,17 @@ void imprimirLista(tpuntero node)
     {                                                                                       //Mientras node no sea NULL
         printf("\n ImprimirLista Energy: %f  -  Period: %f\n", node->energy, node->period); //Imprimimos el valor del nodo
         node = node->next_martian;                                                          //Pasamos al siguiente nodo
+    }
+}
+
+void renderLista(tpuntero node, ALLEGRO_BITMAP *bouncer, ALLEGRO_BITMAP *maze)
+{
+    while (node != NULL)
+    {
+        RedrawDo(node, bouncer, maze);
+        //Mientras node no sea NULL
+        printf("\n Pintando..");   //Imprimimos el valor del nodo
+        node = node->next_martian; //Pasamos al siguiente nodo
     }
 }
 
@@ -190,7 +197,7 @@ int main()
 
     al_flip_display();
 
-    DATA *data = DATA_new(1, 3); // Crear nuevo marciano
+    /*     DATA *data = DATA_new(1, 3); // Crear nuevo marciano
     insertarEnLista(&node_martian, data);
 
     DATA *data1 = DATA_new(3, 5); // Crear nuevo marciano
@@ -205,39 +212,37 @@ int main()
     DATA *get_m = getMartianById(node_martian, 6);
     printf("\nDATOS OBTENIDO DEL GET - Energy: %f  -  Period: %f\n", get_m->energy, get_m->period); //Imprimimos el valor del nodo
 
-    printf("Tamano: %d\n", tamanoLista(node_martian));
+    printf("Tamano: %d\n", tamanoLista(node_martian)); */
 
     al_start_timer(timer); // Start timer
 
+    DATA *dataX = DATA_new(1, 3);
     // Set shared DATA
-    //al_lock_mutex(data->mutex);
-    data->modifyWhich = 1; // segundos a ejecutar ' energia
-    data->ready = false;
-    // al_unlock_mutex(data->mutex);
+    al_lock_mutex(dataX->mutex);
+    dataX->modifyWhich = 1; // segundos a ejecutar ' energia
+    dataX->ready = false;
+    al_unlock_mutex(dataX->mutex);
 
-    printf("%f\n", data->energy);
+    printf("%f\n", dataX->energy);
 
-    ALLEGRO_THREAD *thread_1 = al_create_thread(Func_Thread, data); // Initialize and start thread_1
+    ALLEGRO_THREAD *thread_11 = al_create_thread(Func_Thread, dataX); // Initialize and start thread_1
 
-    for (size_t i = 0; i < 1000000; i++)
+    al_start_thread(thread_11);
+    al_lock_mutex(dataX->mutex);
+    while (!dataX->ready)
     {
-        al_start_thread(thread_1);
-        al_lock_mutex(data->mutex);
-        while (!data->ready)
-        {
-            al_wait_cond(data->cond, data->mutex);
-        }
-        al_unlock_mutex(data->mutex);
+        al_wait_cond(dataX->cond, dataX->mutex);
     }
+    al_unlock_mutex(dataX->mutex);
 
     // Set shared DATA
     // al_lock_mutex(data1->mutex);
-    data1->modifyWhich = 2;
-    data1->ready = false;
+    /*  data1->modifyWhich = 2;
+    data1->ready = false; */
     //  al_unlock_mutex(data1->mutex);
 
     // Initialize and start thread_2
-    ALLEGRO_THREAD *thread_2 = al_create_thread(Func_Thread, data1);
+    /* ALLEGRO_THREAD *thread_2 = al_create_thread(Func_Thread, data1);
     al_start_thread(thread_2);
     al_lock_mutex(data1->mutex);
     while (!data1->ready)
@@ -275,6 +280,7 @@ int main()
         al_wait_cond(data3->cond, data3->mutex);
     }
     al_unlock_mutex(data3->mutex);
+    */
 
     // Event loop
     int code = CODE_CONTINUE;
@@ -284,10 +290,20 @@ int main()
         al_draw_bitmap(maze, POINT);
         if (RedrawIsReady() && al_is_event_queue_empty(event_queue))
         {
-            RedrawDo(data, bouncer, maze);
-            RedrawDo(data1, bouncer, maze);
+            //RedrawDo(dataX, bouncer, maze);
+            /*  RedrawDo(data, bouncer, maze);
             RedrawDo(data2, bouncer, maze);
-            RedrawDo(data3, bouncer, maze);
+            RedrawDo(data3, bouncer, maze); */
+            //renderLista(node_martian, bouncer, maze);
+            //printf("T: %d\n", tamanoLista(node_martian));
+            if (tamanoLista(node_martian) >= 1)
+            {
+                printf("\treder...\n");
+                DATA *get_m = getMartianById(node_martian, 1);
+                RedrawDo(get_m, bouncer, maze);
+            }
+
+            // NO LO RENDERICE
         }
         al_draw_text(font, al_map_rgb(178, 178, 178), 460, 10, 0, "ENERGY: ");
         al_draw_text(font, al_map_rgb(178, 178, 178), 520, 10, 0, ">>>>>>>>>>");
@@ -311,8 +327,12 @@ int main()
     }
 
     // Clean up resources and exit with appropriate code
+    /*     
     al_destroy_thread(thread_1);
-    al_destroy_thread(thread_2);
+    al_destroy_thread(thread_2); 
+    */
+
+    // NO LO DESTRUI
     al_destroy_bitmap(bouncer);
     al_destroy_timer(timer);
     al_destroy_display(display);
@@ -368,6 +388,11 @@ code HandleEvent(ALLEGRO_EVENT ev, tpuntero node_martian)
             borrarLista(&node_martian);
             return EXIT_SUCCESS;
         }
+        if (ev.keyboard.keycode == ALLEGRO_KEY_L)
+        {
+            printf("\n Lista cargada \n");
+            imprimirLista(node_martian);
+        }
         if (ev.keyboard.keycode == ALLEGRO_KEY_ESCAPE)
         {
             new_martian = 0;
@@ -383,12 +408,27 @@ code HandleEvent(ALLEGRO_EVENT ev, tpuntero node_martian)
                 {
                     printf("Create Hilo con data...\n");
 
-                    //int t = tamanoLista(node_martian);
-                    // pthread_t threadID = t + 1;
+                    DATA *data = DATA_new(1, 3); // Crear nuevo marciano
+                    insertarEnLista(&node_martian, data);
+                    al_lock_mutex(data->mutex);
+                    data->modifyWhich = 2;
+                    data->ready = false;
+                    al_unlock_mutex(data->mutex);
 
-                    // insertarEnLista(&node_martian, threadID, energy, period);
-                    // DATA *get_m = getMartianById(node_martian, threadID);
-                    //printf("\nDATOS OBTENIDO DEL GET %ld - Energy: %f  -  Period: %f\n", get_m->id, get_m->energy, get_m->period); //Imprimimos el valor del nodo
+                    printf("Energia nueva : %f\n", data->energy);
+                    printf("Tamano: %d\n", tamanoLista(node_martian));
+
+
+                    // crean hilo
+                    ALLEGRO_THREAD *thread_1 = al_create_thread(Func_Thread, data); // Initialize and start thread_1
+
+                    al_start_thread(thread_1);
+                    al_lock_mutex(data->mutex);
+                    while (!data->ready)
+                    {
+                        al_wait_cond(data->cond, data->mutex);
+                    }
+                    al_unlock_mutex(data->mutex);
                 }
                 else
                 {
