@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <matrix.h>
 #include <stdbool.h>
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_font.h>
@@ -9,26 +10,32 @@
 // ---------------------------------------------------------------------------
 // Header of DATA module
 // ---------------------------------------------------------------------------
-typedef struct
+typedef struct mnodo
 {
     ALLEGRO_MUTEX *mutex;
     ALLEGRO_COND *cond;
     int modifyWhich; // which variable to modify, 'X' or 'Y'
     float posiX;
     float posiY;
+    float period; // Weight
+    float energy; // Speed
     bool ready;
+    struct mnodo *next_martian; //El puntero siguiente para recorrer la lista enlazada
 } DATA;
 
 #define DATA_NEWINIT (    \
     (DATA){               \
         .mutex = NULL,    \
         .cond = NULL,     \
-        .posiX = 96,     \
+        .posiX = 96,      \
         .posiY = 224,     \
+        .period = 0,      \
+        .energy = 0,      \
         .modifyWhich = 0, \
-        .ready = false})
+        .ready = false,   \
+        .next_martian = NULL})
 
-DATA *DATA_new(void);
+DATA *DATA_new(int energy_, int period_);
 void DATA_delete(DATA *self);
 // ---------------------------------------------------------------------------
 
@@ -53,10 +60,12 @@ static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg);
 #define CODE_SUCCESS EXIT_SUCCESS
 #define CODE_FAILURE EXIT_FAILURE
 typedef int code;
+typedef DATA *tpuntero; //Puntero al tipo de dato DATA para no utilizar punteros de punteros
+
 int new_martian = 0;
 int energy = 0;
 int period = 0;
-code HandleEvent(ALLEGRO_EVENT ev);
+code HandleEvent(ALLEGRO_EVENT ev, tpuntero node_martian);
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
@@ -69,11 +78,82 @@ bool RedrawIsReady(void);
 void RedrawDo(); // to be defined in Implementation of EVENT HANDLER Module
 // ---------------------------------------------------------------------------
 
+void insertarEnLista(tpuntero *node_martian, DATA *data)
+{
+    tpuntero new_martian;                         //Creamos un nuevo nodo
+    new_martian = malloc(sizeof(DATA));           //Utilizamos malloc para reservar memoria para ese nodo
+    new_martian->cond = data->cond;               //Le asignamos el valor ingresado por pantalla a ese nodo
+    new_martian->mutex = data->mutex;             //Le asignamos el valor ingresado por pantalla a ese nodo
+    new_martian->period = data->period;           //Le asignamos el valor ingresado por pantalla a ese nodo
+    new_martian->energy = data->energy;           //Le asignamos el valor ingresado por pantalla a ese nodo
+    new_martian->modifyWhich = data->modifyWhich; //Le asignamos el valor ingresado por pantalla a ese nodo
+    new_martian->posiX = data->posiX;             //Le asignamos el valor ingresado por pantalla a ese nodo
+    new_martian->posiY = data->posiY;             //Le asignamos el valor ingresado por pantalla a ese nodo
+    new_martian->ready = data->ready;             //Le asignamos el valor ingresado por pantalla a ese nodo
+
+    new_martian->next_martian = *node_martian; //Le asignamos al siguiente el valor de cabeza
+    *node_martian = new_martian;               //Cabeza pasa a ser el ultimo nodo agregado
+
+    // return threadID;
+}
+
+void imprimirLista(tpuntero node)
+{
+    while (node != NULL)
+    {                                                                                       //Mientras node no sea NULL
+        printf("\n ImprimirLista Energy: %f  -  Period: %f\n", node->energy, node->period); //Imprimimos el valor del nodo
+        node = node->next_martian;                                                          //Pasamos al siguiente nodo
+    }
+}
+
+DATA *getMartianById(tpuntero node, float e)
+{
+    DATA *temp = malloc(sizeof(DATA));
+    while (node != NULL)
+    {
+        if (node->energy == e)
+        {
+            temp = node;
+            break;
+        }
+        node = node->next_martian; //Pasamos al siguiente nodo
+    }
+    return temp;
+}
+
+void borrarLista(tpuntero *node_martian)
+{
+    tpuntero node_temp; //Puntero auxiliar para eliminar correctamente la lista
+
+    printf("Borrando lista ....\n");
+    while (*node_martian != NULL)
+    {                                                  //Mientras node_martian no sea NULL
+        node_temp = *node_martian;                     //Actual toma el valor de node_martian
+        *node_martian = (*node_martian)->next_martian; //Cabeza avanza 1 posicion en la lista
+        free(node_temp);                               //Se libera la memoria de la posicion de Actual (el primer nodo), y node_martian queda apuntando al que ahora es el primero
+    }
+    printf("Lista Borrada!\n");
+}
+
+int tamanoLista(tpuntero node)
+{
+    int r = 0;
+    while (node != NULL)
+    { //Mientras node no sea NULL
+        r++;
+        node = node->next_martian; //Pasamos al siguiente nodo
+    }
+    return r;
+}
+
 // ---------------------------------------------------------------------------
 // Implementation of MAIN Module
 // ---------------------------------------------------------------------------
 int main()
 {
+    tpuntero node_martian; //Indica la node_martian de la lista enlazada, si la perdemos no podremos acceder a la lista
+    node_martian = NULL;   //Se inicializa la node_martian como NULL ya que no hay ningun nodo cargado en la lista
+
     // Initialize Allegro, mouse, timer, display and bitmap
     // XXX - skimping on Allegro error-checking
     al_init();
@@ -105,16 +185,27 @@ int main()
     ALLEGRO_EVENT_QUEUE *event_queue = al_create_event_queue();
     al_register_event_source(event_queue, al_get_display_event_source(display));
     al_register_event_source(event_queue, al_get_timer_event_source(timer));
-    /* al_register_event_source(event_queue, al_get_mouse_event_source()); */
     al_register_event_source(event_queue, al_get_keyboard_event_source());
     al_clear_to_color(BLACK);
 
     al_flip_display();
 
-    DATA *data = DATA_new();  // Crear nuevo marciano
-    DATA *data1 = DATA_new(); // Crear nuevo marciano
-    DATA *data2 = DATA_new(); // Crear nuevo marciano
-    DATA *data3 = DATA_new(); // Crear nuevo marciano
+    DATA *data = DATA_new(1, 3); // Crear nuevo marciano
+    insertarEnLista(&node_martian, data);
+
+    DATA *data1 = DATA_new(3, 5); // Crear nuevo marciano
+    insertarEnLista(&node_martian, data1);
+
+    DATA *data2 = DATA_new(6, 2); // Crear nuevo marciano
+    insertarEnLista(&node_martian, data2);
+
+    DATA *data3 = DATA_new(4, 4); // Crear nuevo marciano
+    insertarEnLista(&node_martian, data3);
+
+    DATA *get_m = getMartianById(node_martian, 6);
+    printf("\nDATOS OBTENIDO DEL GET - Energy: %f  -  Period: %f\n", get_m->energy, get_m->period); //Imprimimos el valor del nodo
+
+    printf("Tamano: %d\n", tamanoLista(node_martian));
 
     al_start_timer(timer); // Start timer
 
@@ -124,15 +215,20 @@ int main()
     data->ready = false;
     // al_unlock_mutex(data->mutex);
 
+    printf("%f\n", data->energy);
+
     ALLEGRO_THREAD *thread_1 = al_create_thread(Func_Thread, data); // Initialize and start thread_1
 
-    al_start_thread(thread_1);
-    al_lock_mutex(data->mutex);
-    while (!data->ready)
+    for (size_t i = 0; i < 1000000; i++)
     {
-        al_wait_cond(data->cond, data->mutex);
+        al_start_thread(thread_1);
+        al_lock_mutex(data->mutex);
+        while (!data->ready)
+        {
+            al_wait_cond(data->cond, data->mutex);
+        }
+        al_unlock_mutex(data->mutex);
     }
-    al_unlock_mutex(data->mutex);
 
     // Set shared DATA
     // al_lock_mutex(data1->mutex);
@@ -211,7 +307,7 @@ int main()
 
         ALLEGRO_EVENT ev;
         al_wait_for_event(event_queue, &ev);
-        code = HandleEvent(ev);
+        code = HandleEvent(ev, node_martian);
     }
 
     // Clean up resources and exit with appropriate code
@@ -258,7 +354,7 @@ static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg)
 // ---------------------------------------------------------------------------
 // Implementation of EVENT HANDLER Module
 // ---------------------------------------------------------------------------
-code HandleEvent(ALLEGRO_EVENT ev)
+code HandleEvent(ALLEGRO_EVENT ev, tpuntero node_martian)
 {
     switch (ev.type)
     {
@@ -268,7 +364,10 @@ code HandleEvent(ALLEGRO_EVENT ev)
         break;
     case ALLEGRO_EVENT_KEY_DOWN:
         if (ev.keyboard.keycode == ALLEGRO_KEY_X)
+        {
+            borrarLista(&node_martian);
             return EXIT_SUCCESS;
+        }
         if (ev.keyboard.keycode == ALLEGRO_KEY_ESCAPE)
         {
             new_martian = 0;
@@ -288,7 +387,7 @@ code HandleEvent(ALLEGRO_EVENT ev)
                     // pthread_t threadID = t + 1;
 
                     // insertarEnLista(&node_martian, threadID, energy, period);
-                    // martian *get_m = getMartianById(node_martian, threadID);
+                    // DATA *get_m = getMartianById(node_martian, threadID);
                     //printf("\nDATOS OBTENIDO DEL GET %ld - Energy: %f  -  Period: %f\n", get_m->id, get_m->energy, get_m->period); //Imprimimos el valor del nodo
                 }
                 else
@@ -319,6 +418,7 @@ code HandleEvent(ALLEGRO_EVENT ev)
         }
         break;
     case ALLEGRO_EVENT_DISPLAY_CLOSE:
+        borrarLista(&node_martian);
         return EXIT_SUCCESS;
     default:
         break;
@@ -342,7 +442,7 @@ void RedrawDo(DATA *data, ALLEGRO_BITMAP *bouncer, ALLEGRO_BITMAP *maze)
 // ---------------------------------------------------------------------------
 // Implementation of DATA module
 // ---------------------------------------------------------------------------
-DATA *DATA_new(void)
+DATA *DATA_new(int energy_, int period_)
 {
     DATA *self = NULL;
     self = malloc(sizeof(*self));
@@ -350,6 +450,8 @@ DATA *DATA_new(void)
     *self = DATA_NEWINIT;
     self->mutex = al_create_mutex();
     self->cond = al_create_cond();
+    self->energy = energy_;
+    self->period = period_;
     assert(self->mutex);
     assert(self->cond);
     return self;
