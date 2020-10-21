@@ -9,7 +9,7 @@
 // Header of DATA module
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-typedef struct node//struct node
+typedef struct node //struct node
 {
   ALLEGRO_MUTEX *mutex;
   ALLEGRO_COND *cond;
@@ -41,7 +41,7 @@ typedef struct
 } DATA;
 
 #define DATA_NEWINIT (       \
-    (DATA){                  \
+    (node){                  \
         .mutex = NULL,       \
         .cond = NULL,        \
         .posiX = 0,          \
@@ -52,8 +52,8 @@ typedef struct
         .next = NULL,        \
         .ready = false})
 
-DATA *DATA_new(void);
-void DATA_delete(DATA *self);
+node *DATA_new(void);
+void DATA_delete(node *self);
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
@@ -64,6 +64,9 @@ const float FPS = 30;
 const int SCREEN_W = 608;
 const int SCREEN_H = 608;
 const int BOUNCER_SIZE = 32;
+int new_martian = 0;
+int energy = 0;
+int period = 0;
 ALLEGRO_BITMAP *bouncer;
 ALLEGRO_DISPLAY *display;
 #define BLACK (al_map_rgb(0, 0, 0))
@@ -85,6 +88,7 @@ code HandleEvent(ALLEGRO_EVENT ev);
 // ---------------------------------------------------------------------------
 // Header of REDRAW HANDLER Module
 // ---------------------------------------------------------------------------
+int length();
 bool REDRAW_IS_READY;
 void RedrawSetReady(void);
 void RedrawClearReady(void);
@@ -101,8 +105,8 @@ void printList()
 {
   node *ptr = NULL;
 
-//  ptr = (node*)malloc(sizeof(node));
-  
+  //  ptr = (node*)malloc(sizeof(node));
+
   ptr = head;
   printf("\n[ ");
   while (ptr != NULL) //start from the beginning
@@ -119,7 +123,7 @@ void renderList()
   node *ptr = head;
   while (ptr != NULL) //start from the beginning
   {
-    printf("<%d , %d> \n", ptr->key, ptr->data);
+    //printf("<%d , %d> \n", ptr->key, ptr->data);
     RedrawDo(ptr, bouncer);
     ptr = ptr->next;
   }
@@ -132,7 +136,7 @@ void insertFirst(int key, int data)
 
   // ** lo meti yo
   assert(link);
-  //*link = DATA_NEWINIT;
+  *link = DATA_NEWINIT;
   link->mutex = al_create_mutex();
   link->cond = al_create_cond();
   assert(link->mutex);
@@ -143,6 +147,7 @@ void insertFirst(int key, int data)
   link->next = head; //point it to old first node
   head = link;       //point first to new first node
   printf("\nInsert it\n");
+  length();
 }
 
 //is list empty
@@ -157,6 +162,7 @@ int length()
   node *current;
   for (current = head; current != NULL; current = current->next)
     length++;
+  printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Length: %d\n", length);
   return length;
 }
 
@@ -219,7 +225,7 @@ int main()
   // DATA *data = DATA_new();
 
   insertFirst(50, 10); // 50 key
-                       // Meter en lista ---------------------------------------------------------------------------------------------------------------------------------
+  // Meter en lista ---------------------------------------------------------------------------------------------------------------------------------
   node *foundLink = find(50);
 
   if (foundLink != NULL)
@@ -272,17 +278,36 @@ int main()
 
   // Event loop
   int code = CODE_CONTINUE;
+  char snum[5];
   while (code == CODE_CONTINUE)
   {
-    al_clear_to_color(al_map_rgb(255, 255, 255));
+    //al_clear_to_color(al_map_rgb(255, 255, 255));
+    al_clear_to_color(BLACK);
     al_draw_bitmap(maze, 0, 0, 0);
     if (RedrawIsReady() && al_is_event_queue_empty(event_queue))
     {
+      al_clear_to_color(BLACK);
 
       //RedrawDo(data, bouncer);
       renderList();
+      al_draw_text(font, al_map_rgb(178, 178, 178), 460, 10, 0, "ENERGY: ");
+      al_draw_text(font, al_map_rgb(178, 178, 178), 520, 10, 0, ">>>>>>>>>>");
+
+      if (new_martian)
+      {
+        sprintf(snum, "%d", energy);
+        al_draw_text(font, al_map_rgb(178, 120, 211), 10, 10, 0, "Energy: ");
+        al_draw_text(font, al_map_rgb(255, 255, 255), 70, 10, 0, snum);
+
+        sprintf(snum, "%d", period);
+        al_draw_text(font, al_map_rgb(178, 120, 211), 108, 10, 0, "Period: ");
+        al_draw_text(font, al_map_rgb(255, 255, 255), 170, 10, 0, snum);
+      }
+
+      al_flip_display();
       //sleep(1);
     }
+    //al_flip_display();
     ALLEGRO_EVENT ev;
     al_wait_for_event(event_queue, &ev);
     code = HandleEvent(ev);
@@ -303,7 +328,7 @@ int main()
 #define UNKNOWN_ERROR (0)
 static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg)
 {
-  DATA *data = arg;
+  node *data = arg;
   al_lock_mutex(data->mutex);
   char mw = data->modifyWhich;
   data->ready = true;
@@ -321,6 +346,7 @@ static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg)
     al_unlock_mutex(data->mutex);
     al_rest(RESTVAL);
   }
+  free(data); // FREE
   return NULL;
 }
 // ---------------------------------------------------------------------------
@@ -345,12 +371,38 @@ code HandleEvent(ALLEGRO_EVENT ev)
       return EXIT_SUCCESS;
     }
     else if (ev.keyboard.keycode == ALLEGRO_KEY_L)
-    {
       printList();
-    }
-    else if (ev.keyboard.keycode == ALLEGRO_KEY_I)
+    else if (ev.keyboard.keycode == ALLEGRO_KEY_T)
+      length();
+    else if (ev.keyboard.keycode == ALLEGRO_KEY_ESCAPE)
     {
-      insertFirst(50, 10);
+      new_martian = 0;
+      energy = 0;
+      period = 0;
+    }
+    else if (ev.keyboard.keycode == ALLEGRO_KEY_ENTER)
+    {
+      if (new_martian == 1) // Deshabilita la creacion de marcianos
+      {
+        if (energy != 0 && period != 0)
+          insertFirst(energy, period);
+          /* printf("Create Hilo con data...\n"); */
+        else
+          printf("Sin data...\n");
+
+        new_martian = 0;
+        energy = 0;
+        period = 0;
+      }
+      else // Habilita la creacion de marcianos
+        new_martian = 1;
+    }
+    else if (new_martian == 1)
+    {
+      if (ev.keyboard.keycode == ALLEGRO_KEY_E)
+        energy++;
+      else if (ev.keyboard.keycode == ALLEGRO_KEY_P)
+        period++;
     }
     break;
   default:
@@ -359,14 +411,14 @@ code HandleEvent(ALLEGRO_EVENT ev)
   return CODE_CONTINUE;
 }
 
-void RedrawDo(DATA *data, ALLEGRO_BITMAP *bouncer)
+void RedrawDo(node *data, ALLEGRO_BITMAP *bouncer)
 {
   al_lock_mutex(data->mutex);
   float X = data->posiX;
   float Y = data->posiY;
   al_unlock_mutex(data->mutex);
   al_draw_bitmap(bouncer, X, Y, 0);
-  al_flip_display();
+  //al_flip_display();
 }
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -374,9 +426,9 @@ void RedrawDo(DATA *data, ALLEGRO_BITMAP *bouncer)
 // ---------------------------------------------------------------------------
 // Implementation of DATA module
 // ---------------------------------------------------------------------------
-DATA *DATA_new(void)
+node *DATA_new(void)
 {
-  DATA *self = NULL;
+  node *self = NULL;
   self = malloc(sizeof(*self));
   assert(self);
   *self = DATA_NEWINIT;
@@ -387,7 +439,7 @@ DATA *DATA_new(void)
   return self;
 }
 
-void DATA_delete(DATA *self)
+void DATA_delete(node *self)
 {
   al_destroy_mutex(self->mutex);
   al_destroy_cond(self->cond);
