@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <allegro5/allegro.h>
+#include <allegro5/allegro_font.h>
+#include <allegro5/allegro_image.h>
 #include <stdbool.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -7,7 +9,7 @@
 // Header of DATA module
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-typedef struct //struct node 
+typedef struct //struct node
 {
   ALLEGRO_MUTEX *mutex;
   ALLEGRO_COND *cond;
@@ -21,7 +23,6 @@ typedef struct //struct node
   bool ready;
   struct node *next;
 } node; // };
-
 
 typedef struct
 {
@@ -60,8 +61,8 @@ void DATA_delete(DATA *self);
 // Header of MAIN module
 // ---------------------------------------------------------------------------
 const float FPS = 30;
-const int SCREEN_W = 640;
-const int SCREEN_H = 480;
+const int SCREEN_W = 608;
+const int SCREEN_H = 608;
 const int BOUNCER_SIZE = 32;
 ALLEGRO_BITMAP *bouncer;
 ALLEGRO_DISPLAY *display;
@@ -90,7 +91,6 @@ void RedrawClearReady(void);
 bool RedrawIsReady(void);
 void RedrawDo(); // to be defined in Implementation of EVENT HANDLER Module
 // ---------------------------------------------------------------------------
-
 
 struct node *head = NULL;
 struct node *current = NULL;
@@ -160,7 +160,7 @@ int length()
 struct node *find(int key)
 {
   node *current = head; //start from the first link
-  if (head == NULL)            //if list is empty
+  if (head == NULL)     //if list is empty
     return NULL;
 
   while (current->key != key) //navigate through list
@@ -186,9 +186,23 @@ int main()
     printf("couldn't initialize keyboard\n");
     return 1;
   }
+  if (!al_init_image_addon())
+  {
+    printf("couldn't initialize image addon\n");
+    return 1;
+  }
+  ALLEGRO_FONT *font = al_create_builtin_font();
+  if (!font)
+  {
+    printf("couldn't initialize font\n");
+    return 1;
+  }
+
   ALLEGRO_TIMER *timer = al_create_timer(1.0 / FPS);
   display = al_create_display(SCREEN_W, SCREEN_H);
   bouncer = al_create_bitmap(BOUNCER_SIZE, BOUNCER_SIZE);
+  ALLEGRO_BITMAP *maze = al_load_bitmap("../src/maze.png");
+
   al_set_target_bitmap(bouncer);
   al_clear_to_color(MAGENTA);
   al_set_target_bitmap(al_get_backbuffer(display));
@@ -198,7 +212,7 @@ int main()
   al_register_event_source(event_queue, al_get_keyboard_event_source());
   al_clear_to_color(BLACK);
   al_flip_display();
- // DATA *data = DATA_new();
+  // DATA *data = DATA_new();
 
   insertFirst(50, 10); // 50 key
                        // Meter en lista ---------------------------------------------------------------------------------------------------------------------------------
@@ -237,27 +251,27 @@ int main()
   al_unlock_mutex(foundLink->mutex);
 
   // Set shared DATA
-  /*   al_lock_mutex(foundLink->mutex);
+  al_lock_mutex(foundLink->mutex);
   foundLink->modifyWhich = 'Y';
   foundLink->ready = false;
-  al_unlock_mutex(foundLink->mutex); */
+  al_unlock_mutex(foundLink->mutex);
 
   // Initialize and start thread_2
-  /*   ALLEGRO_THREAD *thread_2 = al_create_thread(Func_Thread, data);
+  ALLEGRO_THREAD *thread_2 = al_create_thread(Func_Thread, foundLink);
   al_start_thread(thread_2);
-  al_lock_mutex(data->mutex);
-  while (!data->ready)
+  al_lock_mutex(foundLink->mutex);
+  while (!foundLink->ready)
   {
-    al_wait_cond(data->cond, data->mutex);
+    al_wait_cond(foundLink->cond, foundLink->mutex);
   }
-  al_unlock_mutex(data->mutex); */
+  al_unlock_mutex(foundLink->mutex);
 
   // Event loop
   int code = CODE_CONTINUE;
   while (code == CODE_CONTINUE)
   {
     al_clear_to_color(al_map_rgb(255, 255, 255));
-
+    al_draw_bitmap(maze, 0, 0, 0);
     if (RedrawIsReady() && al_is_event_queue_empty(event_queue))
     {
 
