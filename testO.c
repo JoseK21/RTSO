@@ -9,7 +9,7 @@
 // Header of DATA module
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-typedef struct //struct node
+typedef struct node//struct node
 {
   ALLEGRO_MUTEX *mutex;
   ALLEGRO_COND *cond;
@@ -99,7 +99,11 @@ struct node *current = NULL;
 //display the list
 void printList()
 {
-  node *ptr = head;
+  node *ptr = NULL;
+
+//  ptr = (node*)malloc(sizeof(node));
+  
+  ptr = head;
   printf("\n[ ");
   while (ptr != NULL) //start from the beginning
   {
@@ -124,7 +128,7 @@ void renderList()
 //insert link at the first location
 void insertFirst(int key, int data)
 {
-  node *link = (struct node *)malloc(sizeof(node)); //create a link
+  node *link = (node *)malloc(sizeof(node)); //create a link
 
   // ** lo meti yo
   assert(link);
@@ -277,7 +281,7 @@ int main()
 
       //RedrawDo(data, bouncer);
       renderList();
-      sleep(1);
+      //sleep(1);
     }
     ALLEGRO_EVENT ev;
     al_wait_for_event(event_queue, &ev);
