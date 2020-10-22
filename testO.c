@@ -250,8 +250,13 @@ int main()
   foundLink->ready = false;
   al_unlock_mutex(foundLink->mutex);
 
+  // PASARLE LOS SEGUNDOS QUE DEBE PINTARSE COMO ATRIBUTO DEL foundLink Y ENCICLAR LA FUNCION Func_Thread ESTOS SEGUNDOS
   // Initialize and start thread_1
   ALLEGRO_THREAD *thread_1 = al_create_thread(Func_Thread, foundLink);
+
+  /* Para detener el thread */
+  /* al_set_thread_should_stop(ALLEGRO_THREAD *thread) */
+
   al_start_thread(thread_1);
   al_lock_mutex(foundLink->mutex);
   while (!foundLink->ready)
@@ -345,8 +350,31 @@ static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg)
       assert(UNKNOWN_ERROR);
     al_unlock_mutex(data->mutex);
     al_rest(RESTVAL);
+
+    if (data->posiX >= 70)
+    {
+      data->ready = true;
+      al_set_thread_should_stop(thr);
+      printf("Thread Stopped\n");
+    }
+
+/*     if (data->posiY >= 100)
+    {
+      // al_lock_mutex(foundLink->mutex);
+      data->modifyWhich = 'X';
+      data->ready = false;
+      // al_unlock_mutex(foundLink->mutex);
+      printf("Thread Started\n");
+      al_start_thread(thr);
+      al_lock_mutex(data->mutex);
+      while (!data->ready)
+      {
+        al_wait_cond(data->cond, data->mutex);
+      }
+      al_unlock_mutex(data->mutex);
+    } */
   }
-  free(data); // FREE
+  //free(data); // FREE
   return NULL;
 }
 // ---------------------------------------------------------------------------
@@ -386,7 +414,7 @@ code HandleEvent(ALLEGRO_EVENT ev)
       {
         if (energy != 0 && period != 0)
           insertFirst(energy, period);
-          /* printf("Create Hilo con data...\n"); */
+        /* printf("Create Hilo con data...\n"); */
         else
           printf("Sin data...\n");
 
