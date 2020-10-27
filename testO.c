@@ -14,8 +14,8 @@ typedef struct node //struct node
   ALLEGRO_COND *cond;
   float posiX;
   float posiY;
-  int data;
-  int key;
+  int period;
+  int energy;
   char modifyWhich; // which variable to modify, 'X' or 'Y'
   bool ready;
   ALLEGRO_THREAD *thread_id;
@@ -29,8 +29,8 @@ typedef struct node //struct node
         .posiX = 0,          \
         .posiY = 0,          \
         .modifyWhich = '\0', \
-        .key = 0,            \
-        .data = 0,           \
+        .energy = 0,         \
+        .period = 0,         \
         .next = NULL,        \
         .thread_id = NULL,   \
         .ready = false})
@@ -86,7 +86,7 @@ void printListMartians()
   printf("\n[ ");
   while (ptr != NULL) //start from the beginning
   {
-    printf("(%d,%d) ", ptr->key, ptr->data);
+    printf("(%d,%d) ", ptr->energy, ptr->period);
     ptr = ptr->next;
   }
   printf(" ]\n");
@@ -106,11 +106,11 @@ void freeMartians()
 //render list
 void renderListMartians()
 {
-  node *ptr = head;   // Header List
-  while (ptr != NULL) //start from the beginning
+  node *martianTemp = head;   // Header List
+  while (martianTemp != NULL) //start from the beginning
   {
-    RedrawDo(ptr, martian_img); // Pain image martian on screen
-    ptr = ptr->next;            // Follow martian
+    RedrawDo(martianTemp, martian_img); // Pain image martian on screen
+    martianTemp = martianTemp->next;    // Follow martian
   }
 }
 
@@ -120,7 +120,7 @@ void clearListMartians()
 }
 
 //insert link at the first location
-void addMartian(int key, int data)
+void addMartian(int energy, int period)
 {
   node *link = (node *)malloc(sizeof(node)); //create a link
 
@@ -130,8 +130,8 @@ void addMartian(int key, int data)
   link->cond = al_create_cond();   // Condition
   assert(link->mutex);
   assert(link->cond);
-  link->key = key;
-  link->data = data;
+  link->energy = energy;
+  link->period = period;
   link->next = head; //point it to old first node
   head = link;       //point first to new first node
   printf("\nInsert it\n");
@@ -154,21 +154,21 @@ int length()
   return length;
 }
 
-//findMartian a link with given key
-struct node *findMartian(int key)
+//findMartian a link with given energy
+struct node *findMartian(int energy)
 {
   node *current = head; //start from the first link
   if (head == NULL)     //if list is empty
     return NULL;
 
-  while (current->key != key) //navigate through list
+  while (current->energy != energy) //navigate through list
   {
     if (current->next == NULL)
       return NULL; //if it is last node
     else
       current = current->next; //go to next link
   }
-  return current; //if data found, return the current Link
+  return current; //if energy found, return the current Link
 }
 
 // ---------------------------------------------------------------------------
@@ -208,12 +208,12 @@ int main()
   al_clear_to_color(BLACK);
   al_flip_display();
 
-  addMartian(50, 10); // 50 key
+  addMartian(50, 10); // 50 energy
   // Meter en lista ---------------------------------------------------------------------------------------------------------------------------------
   node *foundLink = findMartian(50);
 
   if (foundLink != NULL)
-    printf("Martian found:  (%d,%d) \n", foundLink->key, foundLink->data);
+    printf("Martian found:  (%d,%d) \n", foundLink->energy, foundLink->period);
   else
     printf("Element not found.\n");
 
@@ -242,24 +242,37 @@ int main()
   // Event loop
   int code = CODE_CONTINUE;
   char snum[5];
+  char energyLine[10] = "";
+  int s30 = 0;
+  char ch = '>';
   while (code == CODE_CONTINUE)
   {
     al_draw_bitmap(maze_img, POINT);
 
     if (RedrawIsReady() && al_is_event_queue_empty(event_queue))
     {
+      s30++;
+      if (s30 >= 30)
+      {
+        strncat(energyLine, &ch, 1);
+        s30 = 0;
+
+        if (strlen(energyLine) > 11)
+          strncpy(energyLine, "", 10);
+      }
+
       renderListMartians();
       al_draw_text(font, al_map_rgb(178, 178, 178), 460, 10, 0, "ENERGY: ");
-      al_draw_text(font, al_map_rgb(178, 178, 178), 520, 10, 0, ">>>>>>>>>>");
+      al_draw_text(font, al_map_rgb(195, 145, 220), 520, 10, 0, energyLine);
 
       if (new_martian)
       {
         sprintf(snum, "%d", energy);
-        al_draw_text(font, al_map_rgb(178, 120, 211), 10, 10, 0, "Energy: ");
+        al_draw_text(font, al_map_rgb(195, 145, 220), 10, 10, 0, "Energy: ");
         al_draw_text(font, al_map_rgb(255, 255, 255), 70, 10, 0, snum);
 
         sprintf(snum, "%d", period);
-        al_draw_text(font, al_map_rgb(178, 120, 211), 108, 10, 0, "Period: ");
+        al_draw_text(font, al_map_rgb(195, 145, 220), 108, 10, 0, "Period: ");
         al_draw_text(font, al_map_rgb(255, 255, 255), 170, 10, 0, snum);
       }
 
@@ -272,9 +285,9 @@ int main()
 
   // Clean up resources and exit with appropriate code
 
-  freeMartians(); // Free source thread (Martian List)
+  freeMartians();      // Free source thread (Martian List)
   clearListMartians(); // Delete Martian List
- 
+
   al_destroy_bitmap(martian_img);
   al_destroy_bitmap(maze_img);
   al_destroy_timer(timer);
@@ -288,51 +301,33 @@ int main()
 #define UNKNOWN_ERROR (0)
 static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg)
 {
-  node *data = arg;
-  al_lock_mutex(data->mutex);
-  char mw = data->modifyWhich;
-  data->ready = true;
-  al_broadcast_cond(data->cond);
-  al_unlock_mutex(data->mutex);
+  node *_martianData = arg;
+  al_lock_mutex(_martianData->mutex);
+  char mw = _martianData->modifyWhich;
+  _martianData->ready = true;
+  al_broadcast_cond(_martianData->cond);
+  al_unlock_mutex(_martianData->mutex);
   while (!al_get_thread_should_stop(thr))
   {
-    al_lock_mutex(data->mutex);
+    al_lock_mutex(_martianData->mutex);
     if (mw == 'X')
-      data->posiX += INCVAL;
+      _martianData->posiX += INCVAL;
     else if (mw == 'Y')
-      data->posiY += INCVAL;
+      _martianData->posiY += INCVAL;
     else
       assert(UNKNOWN_ERROR);
-    al_unlock_mutex(data->mutex);
+    al_unlock_mutex(_martianData->mutex);
     al_rest(RESTVAL);
 
-    if (data->posiX >= 70)
+    if (_martianData->posiX >= 70)
     {
-      data->ready = true;
+      _martianData->ready = true;
       al_set_thread_should_stop(thr);
       printf("Thread Stopped\n");
     }
-
-    /*     if (data->posiY >= 100)
-    {
-      // al_lock_mutex(foundLink->mutex);
-      data->modifyWhich = 'X';
-      data->ready = false;
-      // al_unlock_mutex(foundLink->mutex);
-      printf("Thread Started\n");
-      al_start_thread(thr);
-      al_lock_mutex(data->mutex);
-      while (!data->ready)
-      {
-        al_wait_cond(data->cond, data->mutex);
-      }
-      al_unlock_mutex(data->mutex);
-    } */
   }
-  //free(data); // FREE
   return NULL;
 }
-// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // Implementation of EVENT HANDLER Module
@@ -368,10 +363,6 @@ code HandleEvent(ALLEGRO_EVENT ev)
       {
         if (energy != 0 && period != 0)
           addMartian(energy, period);
-        /* printf("Create Hilo con data...\n"); */
-        else
-          printf("Sin data...\n");
-
         new_martian = 0;
         energy = 0;
         period = 0;
@@ -393,12 +384,12 @@ code HandleEvent(ALLEGRO_EVENT ev)
   return CODE_CONTINUE;
 }
 
-void RedrawDo(node *data, ALLEGRO_BITMAP *martian_img)
+void RedrawDo(node *martianData, ALLEGRO_BITMAP *martian_img)
 {
-  al_lock_mutex(data->mutex);
-  float X = data->posiX;
-  float Y = data->posiY;
-  al_unlock_mutex(data->mutex);
+  al_lock_mutex(martianData->mutex);
+  float X = martianData->posiX;
+  float Y = martianData->posiY;
+  al_unlock_mutex(martianData->mutex);
   al_draw_bitmap(martian_img, X, Y, 0);
 }
 
