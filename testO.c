@@ -2,6 +2,7 @@
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_image.h>
+#include <allegro5/allegro_native_dialog.h>
 #include <stdbool.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -122,6 +123,7 @@ void clearListMartians()
 //insert link at the first location
 void addMartian(int energy, int period)
 {
+
   node *link = (node *)malloc(sizeof(node)); //create a link
 
   assert(link);
@@ -132,10 +134,12 @@ void addMartian(int energy, int period)
   assert(link->cond);
   link->energy = energy;
   link->period = period;
+  //link->thread_id = al_create_thread(Func_Thread, link); // Add ID Thread to martian struct
   link->next = head; //point it to old first node
   head = link;       //point first to new first node
-  printf("\nInsert it\n");
-  length();
+  printf("\nMartian inserted...\n");
+  //ALLEGRO_THREAD *martianThread_ = al_create_thread(Func_Thread, link);
+  //link->thread_id = martianThread_; // Add ID Thread to martian struct
 }
 
 //is list empty
@@ -188,10 +192,14 @@ struct node *findLessEnergyMartian()
     }
     martianTemp = martianTemp->next; // Follow martian
   }
-  free(martianTemp);
+  //free(martianTemp);
   return current; //if energy found, return the current Link
 }
 
+void endGame()
+{
+  al_show_native_message_box(display, "End of the game", ">>>>> Thanks <<<<<", "See you later..", NULL, ALLEGRO_MESSAGEBOX_QUESTION);
+}
 // ---------------------------------------------------------------------------
 // Implementation of MAIN Module
 // ---------------------------------------------------------------------------
@@ -229,29 +237,8 @@ int main()
   al_clear_to_color(BLACK);
   al_flip_display();
 
-  addMartian(5, 10); // 5 energy
-  // Meter en lista ---------------------------------------------------------------------------------------------------------------------------------
-  node *foundLink = findMartian(5);
-
-  if (foundLink != NULL)
-    printf("Martian found:  (%d,%d) \n", foundLink->energy, foundLink->period);
-  else
-    printf("Element not found.\n");
-
   // Start timer
   al_start_timer(timer);
-
-  // Set shared MARTIAN
-  al_lock_mutex(foundLink->mutex);   // Lock Mutex
-  foundLink->modifyWhich = 'X';      // Martian Movement
-  foundLink->ready = false;          // Martian Condition
-  al_unlock_mutex(foundLink->mutex); // UnLock Mutex
-
-  /*   al_lock_mutex(foundLink->mutex);
-  foundLink->thread_id = al_create_thread(Func_Thread, foundLink); // Add ID Thread to martian struct
-  al_unlock_mutex(foundLink->mutex); */
-
-  //al_start_thread(foundLink->thread_id); // Start Martian Thread
 
   // Event loop
   int code = CODE_CONTINUE;
@@ -282,7 +269,6 @@ int main()
         {
           if (current_thread != NULL) // valida si existe un hilo anterior (para detenerlo)
           {
-            //foundLessEM->ready = true;
             al_set_thread_should_stop(current_thread);
             printf(">>> >>> Thread Stopped\n");
             current_thread = NULL;
@@ -294,20 +280,17 @@ int main()
             {
               printf("\nMartian found (LESS):  <%d, %d> \n", foundLessEM->energy, foundLessEM->period);
               current_seconds = foundLessEM->energy;
-              //current_thread = foundLessEM->thread_id;
 
-              // Set shared MARTIAN
-              al_lock_mutex(foundLessEM->mutex);   // Lock Mutex
-              foundLessEM->modifyWhich = 'X';      // Martian Movement
-              foundLessEM->ready = false;          // Martian Condition
+              current_thread = al_create_thread(Func_Thread, foundLessEM);
+              // Set shared MARTIAN - LOGIC MAZE HERE - EDIT modifyWhich
+              al_lock_mutex(foundLessEM->mutex);       // Lock Mutex
+              foundLessEM->modifyWhich = 'X';          // Martian Movement
+              foundLessEM->ready = false;              // Martian Condition
+              foundLessEM->thread_id = current_thread; // Martian Thread
+              // current_thread = foundLessEM->thread_id;
               al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
 
-              ALLEGRO_THREAD *thread_1 = al_create_thread(Func_Thread, foundLessEM);
-              current_thread = thread_1;
-
-              //al_create_thread(Func_Thread, foundLessEM);
-              //al_start_thread(foundLessEM->thread_id); // Start Martian Thread
-               al_start_thread(current_thread);
+              al_start_thread(current_thread); // Start Martian Thread
             }
             else
             {
@@ -349,7 +332,7 @@ int main()
   }
 
   // Clean up resources and exit with appropriate code
-
+  endGame();
   freeMartians();      // Free source thread (Martian List)
   clearListMartians(); // Delete Martian List
 
