@@ -171,6 +171,27 @@ struct node *findMartian(int energy)
   return current; //if energy found, return the current Link
 }
 
+struct node *findLessEnergyMartian()
+{
+  if (head == NULL) //if list is empty
+    return NULL;
+
+  node *current = head; //start from the first link
+  int energy_1 = 1000;
+  node *martianTemp = head;   // Header List
+  while (martianTemp != NULL) //start from the beginning
+  {
+    if (martianTemp->energy <= energy_1)
+    {
+      energy_1 = martianTemp->energy;
+      current = martianTemp;
+    }
+    martianTemp = martianTemp->next; // Follow martian
+  }
+  free(martianTemp);
+  return current; //if energy found, return the current Link
+}
+
 // ---------------------------------------------------------------------------
 // Implementation of MAIN Module
 // ---------------------------------------------------------------------------
@@ -208,9 +229,9 @@ int main()
   al_clear_to_color(BLACK);
   al_flip_display();
 
-  addMartian(50, 10); // 50 energy
+  addMartian(5, 10); // 5 energy
   // Meter en lista ---------------------------------------------------------------------------------------------------------------------------------
-  node *foundLink = findMartian(50);
+  node *foundLink = findMartian(5);
 
   if (foundLink != NULL)
     printf("Martian found:  (%d,%d) \n", foundLink->energy, foundLink->period);
@@ -226,18 +247,11 @@ int main()
   foundLink->ready = false;          // Martian Condition
   al_unlock_mutex(foundLink->mutex); // UnLock Mutex
 
-  al_lock_mutex(foundLink->mutex);
-  foundLink->thread_id = al_create_thread(Func_Thread, foundLink); // Add ID Thread to martian struct
-  al_unlock_mutex(foundLink->mutex);
-
-  al_start_thread(foundLink->thread_id); // Start Martian Thread
-
   /*   al_lock_mutex(foundLink->mutex);
-  while (!foundLink->ready)
-  {
-    al_wait_cond(foundLink->cond, foundLink->mutex);
-  }
+  foundLink->thread_id = al_create_thread(Func_Thread, foundLink); // Add ID Thread to martian struct
   al_unlock_mutex(foundLink->mutex); */
+
+  //al_start_thread(foundLink->thread_id); // Start Martian Thread
 
   // Event loop
   int code = CODE_CONTINUE;
@@ -245,6 +259,9 @@ int main()
   char energyLine[10] = "";
   int s30 = 0;
   char ch = '>';
+  int current_seconds = 0;
+  ALLEGRO_THREAD *current_thread = NULL;
+
   while (code == CODE_CONTINUE)
   {
     al_draw_bitmap(maze_img, POINT);
@@ -254,12 +271,60 @@ int main()
       s30++;
       if (s30 >= 30)
       {
+        node *foundLessEM;
         strncat(energyLine, &ch, 1);
         s30 = 0;
 
         if (strlen(energyLine) > 11)
           strncpy(energyLine, "", 10);
+
+        if (current_seconds == 0) // no hay marciano en ejecucion
+        {
+          if (current_thread != NULL) // valida si existe un hilo anterior (para detenerlo)
+          {
+            //foundLessEM->ready = true;
+            al_set_thread_should_stop(current_thread);
+            printf(">>> >>> Thread Stopped\n");
+            current_thread = NULL;
+          }
+          else
+          {
+            foundLessEM = findLessEnergyMartian();
+            if (foundLessEM != NULL)
+            {
+              printf("\nMartian found (LESS):  <%d, %d> \n", foundLessEM->energy, foundLessEM->period);
+              current_seconds = foundLessEM->energy;
+              //current_thread = foundLessEM->thread_id;
+
+              // Set shared MARTIAN
+              al_lock_mutex(foundLessEM->mutex);   // Lock Mutex
+              foundLessEM->modifyWhich = 'X';      // Martian Movement
+              foundLessEM->ready = false;          // Martian Condition
+              al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
+
+              ALLEGRO_THREAD *thread_1 = al_create_thread(Func_Thread, foundLessEM);
+              current_thread = thread_1;
+
+              //al_create_thread(Func_Thread, foundLessEM);
+              //al_start_thread(foundLessEM->thread_id); // Start Martian Thread
+               al_start_thread(current_thread);
+            }
+            else
+            {
+              current_seconds = 0;
+            }
+          }
+        }
+        else if (current_seconds >= 0)
+        {
+          current_seconds--;
+        }
+        else
+        {
+        }
       }
+
+      /* GAME LOGIC HERE */
 
       renderListMartians();
       al_draw_text(font, al_map_rgb(178, 178, 178), 460, 10, 0, "ENERGY: ");
@@ -318,13 +383,6 @@ static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg)
       assert(UNKNOWN_ERROR);
     al_unlock_mutex(_martianData->mutex);
     al_rest(RESTVAL);
-
-    if (_martianData->posiX >= 70)
-    {
-      _martianData->ready = true;
-      al_set_thread_should_stop(thr);
-      printf("Thread Stopped\n");
-    }
   }
   return NULL;
 }
