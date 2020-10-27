@@ -45,7 +45,7 @@ const int BOUNCER_SIZE = 32;
 int new_martian = 0;
 int energy = 0;
 int period = 0;
-ALLEGRO_BITMAP *bouncer;
+ALLEGRO_BITMAP *martian_img;
 ALLEGRO_DISPLAY *display;
 #define BLACK (al_map_rgb(0, 0, 0))
 #define POINT 0, 0, 0
@@ -92,15 +92,31 @@ void printListMartians()
   printf(" ]\n");
 }
 
+void freeMartians()
+{
+  node *ptr = NULL;
+  ptr = head;
+  while (ptr != NULL) //start from the beginning
+  {
+    al_destroy_thread(ptr->thread_id);
+    ptr = ptr->next;
+  }
+}
+
 //render list
 void renderListMartians()
 {
   node *ptr = head;   // Header List
   while (ptr != NULL) //start from the beginning
   {
-    RedrawDo(ptr, bouncer); // Pain image martian on screen
-    ptr = ptr->next;        // Follow martian
+    RedrawDo(ptr, martian_img); // Pain image martian on screen
+    ptr = ptr->next;            // Follow martian
   }
+}
+
+void clearListMartians()
+{
+  head = NULL;
 }
 
 //insert link at the first location
@@ -178,12 +194,12 @@ int main()
     return 1;
   }
 
-  ALLEGRO_TIMER *timer = al_create_timer(1.0 / FPS);        // Clock : Timer - Allegro display screen
-  display = al_create_display(SCREEN_W, SCREEN_H);          // Screen
-  bouncer = al_load_bitmap("../src/alien.png");             // Martian Image
-  ALLEGRO_BITMAP *maze = al_load_bitmap("../src/maze.png"); // Maze Image
+  ALLEGRO_TIMER *timer = al_create_timer(1.0 / FPS);            // Clock : Timer - Allegro display screen
+  display = al_create_display(SCREEN_W, SCREEN_H);              // Screen
+  martian_img = al_load_bitmap("../src/martian.png");           // Martian Image
+  ALLEGRO_BITMAP *maze_img = al_load_bitmap("../src/maze.png"); // Maze Image
 
-  al_set_target_bitmap(bouncer);
+  al_set_target_bitmap(martian_img);
   al_set_target_bitmap(al_get_backbuffer(display));
   ALLEGRO_EVENT_QUEUE *event_queue = al_create_event_queue();
   al_register_event_source(event_queue, al_get_display_event_source(display));
@@ -205,38 +221,33 @@ int main()
   al_start_timer(timer);
 
   // Set shared MARTIAN
-  al_lock_mutex(foundLink->mutex);
-  foundLink->modifyWhich = 'X'; // Martian Movement
-  foundLink->ready = false;     // Martian Condition
-  al_unlock_mutex(foundLink->mutex);
+  al_lock_mutex(foundLink->mutex);   // Lock Mutex
+  foundLink->modifyWhich = 'X';      // Martian Movement
+  foundLink->ready = false;          // Martian Condition
+  al_unlock_mutex(foundLink->mutex); // UnLock Mutex
 
   al_lock_mutex(foundLink->mutex);
   foundLink->thread_id = al_create_thread(Func_Thread, foundLink); // Add ID Thread to martian struct
   al_unlock_mutex(foundLink->mutex);
 
   al_start_thread(foundLink->thread_id); // Start Martian Thread
-  al_lock_mutex(foundLink->mutex);
+
+  /*   al_lock_mutex(foundLink->mutex);
   while (!foundLink->ready)
   {
     al_wait_cond(foundLink->cond, foundLink->mutex);
   }
-  al_unlock_mutex(foundLink->mutex);
+  al_unlock_mutex(foundLink->mutex); */
 
   // Event loop
   int code = CODE_CONTINUE;
   char snum[5];
   while (code == CODE_CONTINUE)
   {
-    //al_clear_to_color(al_map_rgb(255, 255, 255));
-    al_draw_bitmap(maze, POINT);
+    al_draw_bitmap(maze_img, POINT);
 
-    //al_clear_to_color(BLACK);
-    // al_draw_bitmap(maze, 0, 0, 0);
     if (RedrawIsReady() && al_is_event_queue_empty(event_queue))
     {
-      //al_clear_to_color(BLACK);
-
-      //RedrawDo(data, bouncer);
       renderListMartians();
       al_draw_text(font, al_map_rgb(178, 178, 178), 460, 10, 0, "ENERGY: ");
       al_draw_text(font, al_map_rgb(178, 178, 178), 520, 10, 0, ">>>>>>>>>>");
@@ -253,18 +264,19 @@ int main()
       }
 
       al_flip_display();
-      //sleep(1);
     }
-    //al_flip_display();
     ALLEGRO_EVENT ev;
     al_wait_for_event(event_queue, &ev);
     code = HandleEvent(ev);
   }
 
   // Clean up resources and exit with appropriate code
-  al_destroy_thread(foundLink->thread_id);
-  /*  al_destroy_thread(thread_2); */
-  al_destroy_bitmap(bouncer);
+
+  freeMartians(); // Free source thread (Martian List)
+  clearListMartians(); // Delete Martian List
+ 
+  al_destroy_bitmap(martian_img);
+  al_destroy_bitmap(maze_img);
   al_destroy_timer(timer);
   al_destroy_display(display);
   al_destroy_event_queue(event_queue);
@@ -381,13 +393,13 @@ code HandleEvent(ALLEGRO_EVENT ev)
   return CODE_CONTINUE;
 }
 
-void RedrawDo(node *data, ALLEGRO_BITMAP *bouncer)
+void RedrawDo(node *data, ALLEGRO_BITMAP *martian_img)
 {
   al_lock_mutex(data->mutex);
   float X = data->posiX;
   float Y = data->posiY;
   al_unlock_mutex(data->mutex);
-  al_draw_bitmap(bouncer, X, Y, 0);
+  al_draw_bitmap(martian_img, X, Y, 0);
 }
 
 // ---------------------------------------------------------------------------
