@@ -25,6 +25,14 @@ typedef struct node //struct node
   struct node *next;
 } node; // };
 
+struct report
+{
+  int data;
+  struct report *next;
+};
+
+struct report *head_report = NULL;
+
 #define DATA_NEWINIT (       \
     (node){                  \
         .mutex = NULL,       \
@@ -71,6 +79,71 @@ static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg);
 typedef int code;
 code HandleEvent(ALLEGRO_EVENT ev);
 // ---------------------------------------------------------------------------
+/* REPORT */
+void printReport()
+{
+  struct report *ptrReport = head_report;
+  printf("\n< ");
+
+  //start from the beginning
+  while (ptrReport != NULL)
+  {
+    printf("[%d]", ptrReport->data);
+    ptrReport = ptrReport->next;
+  }
+  printf(" >\n");
+}
+
+void addLast(struct report **head, int val)
+{
+  //create a new node
+  struct report *newNode = malloc(sizeof(struct report));
+  newNode->data = val;
+  newNode->next = NULL;
+
+  //if head is NULL, it is an empty list
+  if (*head == NULL)
+    *head = newNode;
+  //Otherwise, find the last report and add the newNode
+  else
+  {
+    struct report *lastNode = *head;
+
+    //last report's next address will be NULL.
+    while (lastNode->next != NULL)
+    {
+      lastNode = lastNode->next;
+    }
+
+    //add the newNode at the end of the linked list
+    lastNode->next = newNode;
+  }
+}
+
+void insertFirst(int data)
+{
+  struct report *link = (struct report *)malloc(sizeof(struct report));
+  link->data = data;
+  link->next = head_report;
+  head_report = link;
+}
+
+void reverse(struct report **head_ref)
+{
+  struct report *prev = NULL;
+  struct report *current = *head_ref;
+  struct report *next;
+
+  while (current != NULL)
+  {
+    next = current->next;
+    current->next = prev;
+    prev = current;
+    current = next;
+  }
+
+  *head_ref = prev;
+}
 
 // ---------------------------------------------------------------------------
 // Header of REDRAW HANDLER Module
@@ -421,6 +494,8 @@ int main(int argc, char *argv[])
                 current_seconds = foundLessEM->energy;
                 preview_energy = foundLessEM->energy;
                 martianMovement = foundLessEM->id;
+                //insertFirst(martianMovement);
+                addLast(&head_report, martianMovement);
 
                 // Set shared MARTIAN - LOGIC MAZE HERE - EDIT modifyWhich
                 al_lock_mutex(foundLessEM->mutex);   // Lock Mutex
@@ -547,6 +622,10 @@ code HandleEvent(ALLEGRO_EVENT ev)
     {
       if (__mode == 1)
         __start_auto = 1;
+    }
+    else if (ev.keyboard.keycode == ALLEGRO_KEY_R)
+    {
+      printReport();
     }
     else if (ev.keyboard.keycode == ALLEGRO_KEY_L)
       printListMartians();
