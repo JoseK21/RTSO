@@ -354,6 +354,7 @@ int main(int argc, char *argv[])
   char senergy[5];
   char speriod[5];
   char smode[10];
+  char smmove[10];
   char energyLine[10] = "";
   int s30 = 0;
   int sGame = 0;
@@ -380,10 +381,11 @@ int main(int argc, char *argv[])
         s30++;
         if (s30 >= 30) // un secundo
         {
-
           s30 = 0;
           sGame++;
 
+          if (strlen(energyLine) > 9)
+            strncpy(energyLine, "", 10);
           /*         u = formuleRM();
         if (u != -1 && u <= 0.69314718056)
         {
@@ -454,13 +456,11 @@ int main(int argc, char *argv[])
         al_draw_text(font, al_map_rgb(195, 145, 220), 440, 10, 0, smode);
       }
 
-      /*       al_draw_text(font, al_map_rgb(70, 70, 70), 10, 590, 0, "Mode: ");
+      al_draw_text(font, al_map_rgb(70, 70, 70), 10, 590, 0, "Mode: ");
       if (__mode == 0)
-        strncpy(snum, "Manual", 10);
+        al_draw_text(font, al_map_rgb(70, 70, 70), 55, 590, 0, "Manual");
       else
-        strncpy(snum, "Auto", 10);
-
-      al_draw_text(font, al_map_rgb(70, 70, 70), 55, 590, 0, snum); */
+        al_draw_text(font, al_map_rgb(70, 70, 70), 55, 590, 0, "Auto");
 
       if (new_martian)
       {
@@ -474,7 +474,7 @@ int main(int argc, char *argv[])
       }
 
       al_draw_text(font, al_map_rgb(178, 178, 178), 460, 10, 0, "ENERGY: ");
-      al_draw_text(font, al_map_rgb(195, 0, 220), 520, 10, 0, energyLine);
+      al_draw_text(font, al_map_rgb(195, 145, 220), 520, 10, 0, energyLine);
 
       al_flip_display();
     }
