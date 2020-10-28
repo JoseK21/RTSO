@@ -4,7 +4,7 @@ BIND_DIR = ./bin
 ALLEGRO_FLAGS := $(shell pkg-config allegro-5 allegro_font-5 allegro_image-5 allegro_dialog-5 --libs --cflags)
 P_THREAD = -pthread
 CC = gcc
-APP_NAME = testO
+APP_NAME = RTOS
 
 all: buildApp
 
