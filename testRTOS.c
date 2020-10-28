@@ -21,7 +21,6 @@ typedef struct node //struct node
   int id;
   char modifyWhich; // which variable to modify, 'X' or 'Y'
   bool isUsed;
-  bool isDone;
   bool isActived;
   ALLEGRO_THREAD *thread_id;
   struct node *next;
@@ -47,10 +46,9 @@ struct report *head_report = NULL;
         .id = 0,             \
         .modifyWhich = '\0', \
         .isUsed = false,     \
-        .isDone = false,     \
         .isActived = false,  \
-        .next = NULL,        \
         .thread_id = NULL,   \
+        .next = NULL,        \
     })
 
 // ---------------------------------------------------------------------------
@@ -103,6 +101,8 @@ void addLast(struct report **head, int val)
 {
   //create a new node
   struct report *newNode = malloc(sizeof(struct report));
+
+  //newNode = malloc(sizeof(struct report));
   newNode->data = val;
   newNode->next = NULL;
 
@@ -198,7 +198,6 @@ void addMartian(int energy, int period)
   link->id = length() + 1;
   link->isActived = false;
   link->isUsed = false;
-  link->isDone = false;
   link->next = head; //point it to old first node
   head = link;       //point first to new first node
   ALLEGRO_THREAD *martianThread_ = al_create_thread(Func_Thread, link);
@@ -250,7 +249,7 @@ struct node *findLessEnergyMartian()
   node *martianTemp = head;   // Header List
   while (martianTemp != NULL) //start from the beginning
   {
-    if (martianTemp->energy <= energy_1 && martianTemp->isUsed == false && martianTemp->energy != 0)
+    if (martianTemp->energy <= energy_1 && martianTemp->isUsed == false && martianTemp->energy > 0)
     {
       energy_1 = martianTemp->energy;
       current = martianTemp;
@@ -269,17 +268,17 @@ void resetPeriodTime(int sGame)
   {
     node *martianTemp = head; // Header List
     int residuo = 0;
-    printf("\n>> Data on second : %d\n", sGame);
+    printf("\n>> sGame : %d\n", sGame - 1);
 
     while (martianTemp != NULL) //start from the beginning
     {
       residuo = sGame % martianTemp->period;
-      printf("\tID >> %d E:%d P:%d - isUsed: %d isDone: %d isActive: %d  --- Residuo : %d \n", martianTemp->id, martianTemp->energy, martianTemp->period, martianTemp->isUsed, martianTemp->isDone, martianTemp->isActived, residuo);
+      printf("\t>> (%d)(%d)<%d> Residuo : %d \n", martianTemp->energy, martianTemp->period, martianTemp->id, residuo);
       if (residuo == 0)
       {
         martianTemp->isUsed = false;
         martianTemp->energy = martianTemp->static_energy;
-        printf(">Reset <%d>\n", martianTemp->id);
+        printf("\t -Reset : %d\n", martianTemp->id);
       }
 
       martianTemp = martianTemp->next; // Follow martian
@@ -460,53 +459,46 @@ int main(int argc, char *argv[])
         {
           printf("No (Error RM) u: %f\n", u);
         } */
+          /*  resetPeriodTime(sGame); */
 
           if (current_seconds == 0) // no hay marciano en ejecucion
           {
-            if (foundLessEM != NULL) // valida si existe un hilo anterior (para detenerlo)
+            if (foundLessEM == NULL) // valida si ta no tenemos un arciano en movimiento
             {
-              strncpy(energyLine, "", 10);
-              al_lock_mutex(foundLessEM->mutex); // Lock Mutex
-
-              foundLessEM->isActived = false; //Detencion del hilo
-              foundLessEM->isUsed = true;
-              //foundLessEM->energy = preview_energy;
-              al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
-              printf("\n---- -- Thread Stopped <%d> -- second : %d ----\n", foundLessEM->id, sGame);
-              sGame--;
-
-              foundLessEM = NULL;
-            }
-            else
-            {
-              // Reset energy - period
-              foundLessEM = findLessEnergyMartian();
+              foundLessEM = findLessEnergyMartian(); // encuentra el marciano con menor Energy y que no se haya usado
               if (foundLessEM != NULL)
               {
-                printf("\nFind ID : %d -- second : %d \n", foundLessEM->id, sGame);
+                printf("\n%d.Martian found (LESS):  <%d, %d> isUsed(%d)\n", foundLessEM->id, foundLessEM->energy, foundLessEM->period, foundLessEM->isUsed);
                 current_seconds = foundLessEM->energy;
                 preview_energy = foundLessEM->energy;
                 martianMovement = foundLessEM->id;
                 addLast(&head_report, martianMovement);
                 // Set shared MARTIAN - LOGIC MAZE HERE - EDIT modifyWhich
+                printReport();
                 al_lock_mutex(foundLessEM->mutex);   // Lock Mutex
                 foundLessEM->modifyWhich = 'X';      // Martian Movement
                 foundLessEM->isActived = true;       // Martian Thread
+                foundLessEM->energy--;                                       
+                //foundLessEM->isUsed = true;       // Martian Thread
                 al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
-
-                al_lock_mutex(foundLessEM->mutex); // Lock Mutex
-                foundLessEM->energy--;             // Martian Movement
-                current_seconds = foundLessEM->energy;
-                al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
-                strncat(energyLine, &ch, 1);
               }
               else
               {
                 current_seconds = 0;
               }
             }
+            else // valida si existe un hilo anterior (para detenerlo)
+            {
+              strncpy(energyLine, "", 10);
+              al_lock_mutex(foundLessEM->mutex); // Lock Mutex
+              foundLessEM->isActived = false;
+              foundLessEM->isUsed = true;
+              al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
+              printf("\n---- -- Thread Stopped <%d> -- ----\n", foundLessEM->id);
+              foundLessEM = NULL;
+            }
           }
-          else if (current_seconds > 0)
+          else
           {
             al_lock_mutex(foundLessEM->mutex); // Lock Mutex
             foundLessEM->energy--;             // Martian Movement
@@ -514,12 +506,8 @@ int main(int argc, char *argv[])
             al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
             strncat(energyLine, &ch, 1);
           }
-          else
-          {
-            printf("Error : Negative current_seconds\n");
-          }
 
-          resetPeriodTime(sGame);
+          resetPeriodTime(sGame); // Verifica si algun marciano ocupa regarcar energia (deadline)
         }
         renderListMartians();
       }
