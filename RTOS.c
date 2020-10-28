@@ -120,31 +120,6 @@ void addLast(struct report **head, int val)
   }
 }
 
-void insertFirst(int data)
-{
-  struct report *link = (struct report *)malloc(sizeof(struct report));
-  link->data = data;
-  link->next = head_report;
-  head_report = link;
-}
-
-void reverse(struct report **head_ref)
-{
-  struct report *prev = NULL;
-  struct report *current = *head_ref;
-  struct report *next;
-
-  while (current != NULL)
-  {
-    next = current->next;
-    current->next = prev;
-    prev = current;
-    current = next;
-  }
-
-  *head_ref = prev;
-}
-
 // ---------------------------------------------------------------------------
 // Header of REDRAW HANDLER Module
 // ---------------------------------------------------------------------------
@@ -293,6 +268,8 @@ void resetPeriodTime(int sGame)
       if (residuo == 0)
       {
         martianTemp->isUsed = false;
+        printf("sGame : %d", sGame);
+        printf("\tMartian Reset Calendar : %d\n", martianTemp->id);
       }
       martianTemp = martianTemp->next; // Follow martian
     }
@@ -494,7 +471,6 @@ int main(int argc, char *argv[])
                 current_seconds = foundLessEM->energy;
                 preview_energy = foundLessEM->energy;
                 martianMovement = foundLessEM->id;
-                //insertFirst(martianMovement);
                 addLast(&head_report, martianMovement);
 
                 // Set shared MARTIAN - LOGIC MAZE HERE - EDIT modifyWhich
@@ -641,7 +617,7 @@ code HandleEvent(ALLEGRO_EVENT ev)
     {
       if (new_martian == 1) // Deshabilita la creacion de marcianos
       {
-        if (energy != 0 && period != 0)
+        if (energy != 0 && period != 0 && energy < period)
           addMartian(energy, period);
         new_martian = 0;
         energy = 0;
