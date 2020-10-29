@@ -70,7 +70,7 @@ int __mode;
 int __start_auto = 0; // 0 : false
 int __ok = 0;         // 0 : false
 
-float __RM_u = 0;  // 0 : false
+float U = 0;       // 0 : false
 float __RM_Ci = 0; // 0 : false
 float __RM_Pi = 0; // 0 : false
 
@@ -239,7 +239,7 @@ void addMartian(int energy, int period)
   __RM_Ci = __RM_Ci + energy;
   __RM_Pi = __RM_Pi + period;
 
-  __RM_u = __RM_Ci / __RM_Pi;
+  U = __RM_Ci / __RM_Pi;
   node *link = (node *)malloc(sizeof(node)); //create a link
 
   assert(link);
@@ -295,33 +295,19 @@ struct node *findMartianID(int id)
   return current; //if id found, return the current Link
 }
 
-struct node *findLessEnergyMartian()
+struct node *findEDF_Martian()
 {
   if (head == NULL) //if list is empty
     return NULL;
 
   node *current = head;       //start from the first link
-  int energy_1 = 9999;        // Defaul Value
+  int period_1 = 9999;        // Defaul Value
   node *martianTemp = head;   // Header List
   while (martianTemp != NULL) //start from the beginning
   {
-    if (martianTemp->isReady_New == true && martianTemp->inProgress == false) // false
+    if (martianTemp->period <= period_1 && martianTemp->isDone == false) // martianTemp->isReady_New = true;
     {
-      if (is_all_news == 1)
-      {
-        //puts("\nAll News");
-      }
-      else
-      {
-        energy_1 = martianTemp->energy;
-        current = martianTemp;
-        //puts("\n-------");
-        break;
-      }
-    }
-    if (martianTemp->energy <= energy_1 && martianTemp->isDone == false && martianTemp->energy != 0) // martianTemp->isReady_New = true;
-    {
-      energy_1 = martianTemp->energy;
+      period_1 = martianTemp->period;
       current = martianTemp;
     }
     martianTemp = martianTemp->next; // Follow martian
@@ -332,7 +318,7 @@ struct node *findLessEnergyMartian()
   return current; //if energy found, return the current Link
 }
 
-struct node *findLessEnergyMartian___TEST()
+struct node *findRM_Martian()
 {
   if (head == NULL) //if list is empty
     return NULL;
@@ -342,7 +328,7 @@ struct node *findLessEnergyMartian___TEST()
   node *martianTemp = head;   // Header List
   while (martianTemp != NULL) //start from the beginning
   {
-    if (martianTemp->static_energy <= energy_1 && martianTemp->isDone == false ) // martianTemp->isReady_New = true;
+    if (martianTemp->static_energy <= energy_1 && martianTemp->isDone == false) // martianTemp->isReady_New = true;
     {
       energy_1 = martianTemp->static_energy;
       current = martianTemp;
@@ -551,13 +537,13 @@ int main(int argc, char *argv[])
   node *foundLessEM = NULL;
 
   /* TEST */
-/*   addMartian(1, 6);
+  addMartian(1, 6);
   addMartian(2, 9);
-  addMartian(6, 18); */
+  addMartian(6, 18);
 
-  addMartian(1, 3);
+  /*   addMartian(1, 3);
   addMartian(2, 5);
-  addMartian(2, 9);
+  addMartian(2, 9); */
   __start_auto = 1;
   /* END TEST */
 
@@ -583,7 +569,16 @@ int main(int argc, char *argv[])
           {
 
             stopAllThread();
-            foundLessEM = findLessEnergyMartian___TEST();
+
+            if (__algorithm == 0)
+            {
+              foundLessEM = findRM_Martian();
+            }
+            else
+            {
+              foundLessEM = findEDF_Martian();
+            }
+
             if (foundLessEM != NULL)
             {
               martianID = foundLessEM->id;
@@ -638,8 +633,10 @@ int main(int argc, char *argv[])
           }
         }
         renderListMartians();
-        // printf("\t\t\t__RM_u : %f\n", __RM_u);
-        if (__RM_u > 0 && __RM_u <= 0.69314718056)
+        // printf("\t\t\tU : %f\n", U);
+        if (__algorithm == 0 && U > 0 && U <= 0.69314718056)
+          al_draw_text(font, al_map_rgb(30, 180, 40), 580, 590, 0, "Ok");
+        else if (__algorithm == 1 && U > 0 && U <= 1)
           al_draw_text(font, al_map_rgb(30, 180, 40), 580, 590, 0, "Ok");
         else
           al_draw_text(font, al_map_rgb(153, 0, 0), 580, 590, 0, "X");
@@ -658,6 +655,11 @@ int main(int argc, char *argv[])
         al_draw_text(font, al_map_rgb(70, 70, 70), 55, 590, 0, "Manual");
       else
         al_draw_text(font, al_map_rgb(70, 70, 70), 55, 590, 0, "Auto");
+
+      if (__algorithm == 0)
+        al_draw_text(font, al_map_rgb(70, 70, 70), 285, 590, 0, "RM");
+      else
+        al_draw_text(font, al_map_rgb(70, 70, 70), 285, 590, 0, "EDF");
 
       if (new_martian)
       {
@@ -691,6 +693,10 @@ int main(int argc, char *argv[])
   char reportID[5];
   int i;
   al_draw_text(font, al_map_rgb(255, 255, 255), 241, 20, 0, "---- REPORT ----");
+  if (__algorithm == 0)
+    al_draw_text(font, al_map_rgb(70, 70, 70), 293, 35, 0, "RM");
+  else
+    al_draw_text(font, al_map_rgb(70, 70, 70), 290, 35, 0, "EDF");
   /* Header Vertical*/
   for (i = 0; i < length(); ++i)
   {

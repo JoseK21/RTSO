@@ -1,0 +1,21 @@
+
+En t = 0 todas las tareas se liberan, pero las prioridades se deciden de acuerdo con sus plazos absolutos, 
+por lo que T1 tiene una mayor prioridad ya que su fecha límite es 4 antes que T2 cuya fecha límite es 6 y T3 cuya fecha límite es 8, por eso se ejecuta primero.
+
+En t = 1 nuevamente se comparan los plazos absolutos y T2 tiene un plazo más corto, por lo que se ejecuta y después de eso, T3 comienza la ejecución, 
+pero en t = 4 T1 entra en el sistema y se comparan los plazos, en este instante tanto T1 como T3 tienen los mismos plazos, por lo que hay empates. 
+se rompen aleatoriamente, por lo que continuamos ejecutando T3.
+
+En t = 6, se libera T2, ahora la fecha límite de T1 es más temprana que T2, por lo que comienza la ejecución y después de eso, T2 comienza a ejecutarse. 
+En t = 8 nuevamente, T1 y T2 tienen los mismos plazos, es decir, t = 16, por lo que los empates se rompen al azar, un T2 continúa su ejecución y luego T1 se completa. 
+Ahora, en t = 12, T1 y T2 entran en el sistema simultáneamente, por lo que al comparar los plazos absolutos, T1 y T2 tienen los mismos plazos, por lo que los lazos se 
+rompen al azar y continuamos ejecutando T3.
+
+En t = 13 T1 comienza su ejecución y termina en t = 14. Ahora T2 es la única tarea en el sistema, por lo que completa su ejecución.
+
+En t = 16, T1 y T2 se liberan juntos, las prioridades se deciden de acuerdo con fechas límite absolutas, por lo que T1 se ejecuta primero ya que su fecha límite es t = 20 
+y la fecha límite de T3 es t = 24.Después de la finalización de T1, T3 comienza y llega en t = 17 donde T2 viene en el sistema ahora por comparación de fecha límite, ambos 
+tienen la misma fecha límite t = 24, por lo que los empates se rompen al azar y continuamos ejecutando T3.
+
+En t = 20, tanto T1 como T2 están en el sistema y ambos tienen la misma fecha límite t = 24, por lo que nuevamente los lazos se rompen al azar y T2 se ejecuta. Después de eso,
+T1 completa su ejecución. De la misma forma el sistema seguirá funcionando sin ningún problema siguiendo el algoritmo EDF.
