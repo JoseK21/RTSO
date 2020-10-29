@@ -66,6 +66,8 @@ int period = 0;
 int __algorithm;
 int __mode;
 int __start_auto = 0; // 0 : false
+int all_news = 0;     // All Thread (Martians) are ready
+int is_all_news = 0;  // All Thread (Martians) are ready
 
 ALLEGRO_BITMAP *martian_img;
 ALLEGRO_DISPLAY *display;
@@ -250,11 +252,18 @@ struct node *findLessEnergyMartian()
   node *martianTemp = head;   // Header List
   while (martianTemp != NULL) //start from the beginning
   {
-    if (martianTemp->isReady_New == true)
+    if (martianTemp->isReady_New == true && martianTemp->inProgress == false)
     {
-      energy_1 = martianTemp->energy;
-      current = martianTemp;
-      break;
+      //printf("^all_news^ : %d", all_news);
+      if (is_all_news == 1)
+      {
+        puts("\nAll News");
+      }else {
+        energy_1 = martianTemp->energy;
+        current = martianTemp;
+        puts("\n-------");
+        break;
+      }
     }
 
     if (martianTemp->energy <= energy_1 && martianTemp->isDone == false && martianTemp->energy != 0) // martianTemp->isReady_New = true;
@@ -271,50 +280,45 @@ struct node *findLessEnergyMartian()
   return current; //if energy found, return the current Link
 }
 
-struct node *findNewMartian()
-{
-  if (head == NULL) //if list is empty
-    return NULL;
-
-  node *current = head;       //start from the first link
-  int energy_1 = 1000;        // Defaul Value
-  node *martianTemp = head;   // Header List
-  while (martianTemp != NULL) //start from the beginning
-  {
-    if (martianTemp->isDone == false && martianTemp->isReady_New == true) // martianTemp->isReady_New = true;
-    {
-      energy_1 = martianTemp->energy;
-      current = martianTemp;
-    }
-    martianTemp = martianTemp->next; // Follow martian
-  }
-
-  if (current->isDone == true)
-    return NULL;  //if energy found, return the current Link
-  return current; //if energy found, return the current Link
-}
-
 void resetPeriodTime(int sGame)
 {
   if (head != NULL)
   {
     node *martianTemp = head; // Header List
     int residuo = 0;
-
+    int all_news = 0;
+    puts("");
     while (martianTemp != NULL) //start from the beginning
     {
       residuo = sGame % martianTemp->period;
-      printf("\nID >> %d E:%d P:%d \tisDone: %d inProgress: %d \tResiduo : %d ", martianTemp->id, martianTemp->energy, martianTemp->period, martianTemp->isDone, martianTemp->inProgress, residuo);
+      all_news = all_news + residuo;
+      printf("ID >> %d E:%d P:%d \tisDone: %d inProgress: %d \tResiduo : %d ", martianTemp->id, martianTemp->energy, martianTemp->period, martianTemp->isDone, martianTemp->inProgress, residuo);
       if (residuo == 0)
       {
+        al_lock_mutex(martianTemp->mutex); // Lock Mutex
+
         martianTemp->isDone = false;
         martianTemp->isReady_New = true;
+        martianTemp->inProgress = false;
         martianTemp->energy = martianTemp->static_energy;
         //printf("*** \n", martianTemp->id);
-        printf("***");
+        al_unlock_mutex(martianTemp->mutex); // UnLock Mutex
+
+        printf("***\n");
       }
+      else
+        puts("");
 
       martianTemp = martianTemp->next; // Follow martian
+    }
+    if (all_news == 0)
+    {
+      is_all_news = 1; // true
+      printf("\n^all_news^ : %d", all_news);
+    }
+    else
+    {
+      is_all_news = 0; // false
     }
   }
 }
@@ -464,6 +468,7 @@ int main(int argc, char *argv[])
   addMartian(1, 6);
   addMartian(2, 9);
   addMartian(6, 18);
+  __start_auto = 1;
   /* END TEST */
 
   while (code == CODE_CONTINUE)
