@@ -301,13 +301,12 @@ struct node *findLessEnergyMartian()
     return NULL;
 
   node *current = head;       //start from the first link
-  int energy_1 = 1000;        // Defaul Value
+  int energy_1 = 9999;        // Defaul Value
   node *martianTemp = head;   // Header List
   while (martianTemp != NULL) //start from the beginning
   {
-    if (martianTemp->isReady_New == true && martianTemp->inProgress == false)
+    if (martianTemp->isReady_New == true && martianTemp->inProgress == false) // false
     {
-      //printf("^all_news^ : %d", all_news);
       if (is_all_news == 1)
       {
         //puts("\nAll News");
@@ -320,13 +319,11 @@ struct node *findLessEnergyMartian()
         break;
       }
     }
-
     if (martianTemp->energy <= energy_1 && martianTemp->isDone == false && martianTemp->energy != 0) // martianTemp->isReady_New = true;
     {
       energy_1 = martianTemp->energy;
       current = martianTemp;
     }
-
     martianTemp = martianTemp->next; // Follow martian
   }
 
@@ -342,12 +339,21 @@ void resetPeriodTime(int sGame)
     node *martianTemp = head; // Header List
     int residuo = 0;
     int all_news = 0;
-    //puts("");
+    puts("");
     while (martianTemp != NULL) //start from the beginning
     {
       residuo = sGame % martianTemp->period;
       all_news = all_news + residuo;
-      //printf("ID >> %d E:%d P:%d \tisDone: %d inProgress: %d \tResiduo : %d ", martianTemp->id, martianTemp->energy, martianTemp->period, martianTemp->isDone, martianTemp->inProgress, residuo);
+      printf("%d. E:%d P:%d \tisDone: %d isReady_New: %d inProgress: %d  isActive: %d  \tResiduo : %d ",
+             martianTemp->id,
+             martianTemp->energy,
+             martianTemp->period,
+             martianTemp->isDone,
+             martianTemp->isReady_New,
+             martianTemp->inProgress,
+             martianTemp->isActive,
+             residuo);
+
       if (residuo == 0)
       {
         al_lock_mutex(martianTemp->mutex); // Lock Mutex
@@ -356,13 +362,12 @@ void resetPeriodTime(int sGame)
         martianTemp->isReady_New = true;
         martianTemp->inProgress = false;
         martianTemp->energy = martianTemp->static_energy;
-        //printf("*** \n", martianTemp->id);
         al_unlock_mutex(martianTemp->mutex); // UnLock Mutex
 
-        // printf("***\n");
+        printf("***\n");
       }
-      /*       else
-        puts(""); */
+      else
+        puts("");
 
       martianTemp = martianTemp->next; // Follow martian
     }
@@ -526,6 +531,10 @@ int main(int argc, char *argv[])
   addMartian(1, 6);
   addMartian(2, 9);
   addMartian(6, 18);
+
+/*   addMartian(1, 3);
+  addMartian(2, 5);
+  addMartian(2, 9); */
   __start_auto = 1;
   /* END TEST */
 
@@ -539,20 +548,17 @@ int main(int argc, char *argv[])
       if (__mode == 0 || __start_auto == 1)
       {
         s30++;
-        if (s30 >= 30) // un secundo
+        if (s30 >= 30) // un segundo
         {
           s30 = 0;
           sGame++;
 
           if (strlen(energyLine) > 9)
-          {
             strncpy(energyLine, "", 10);
-          }
 
           if (length() != 0) // valida si existe un hilo anterior (para detenerlo)
           {
-            // Reset energy - period
-            // resetPeriodTime(sGame);
+
             stopAllThread();
             foundLessEM = findLessEnergyMartian();
             if (foundLessEM != NULL)
@@ -561,8 +567,6 @@ int main(int argc, char *argv[])
 
               preview_energy = foundLessEM->energy;
               addLast(&head_report, martianID);
-              // Set shared MARTIAN - LOGIC MAZE HERE - EDIT modifyWhich
-              //puts(" ");
               al_lock_mutex(foundLessEM->mutex);   // Lock Mutex
               foundLessEM->modifyWhich = 'X';      // Martian Movement
               foundLessEM->inProgress = true;      // Martian Thread
@@ -585,7 +589,7 @@ int main(int argc, char *argv[])
               foundLessEM->energy--;               // Martian Movement
               al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
 
-              //printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d -> %d \n", sGame, martianID, foundLessEM->energy + 1, foundLessEM->energy);
+              printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d -> %d \n", sGame, martianID, foundLessEM->energy + 1, foundLessEM->energy);
 
               al_lock_mutex(foundLessEM->mutex); // Lock Mutex
               if (foundLessEM->energy == 0)
@@ -657,29 +661,35 @@ int main(int argc, char *argv[])
   //al_draw_text(font, al_map_rgb(255, 255, 255), 0, 0, 0, "Hello world!");
   //  al_flip_display();
 
-  int step_Vertical = 200;
+  int step_Vertical = 50;
   int step_Horizontal = 30;
   int new_step_Vertical = 0;
 
   char reportID[5];
   int i;
-
+  al_draw_text(font, al_map_rgb(255, 255, 255), 241, 20, 0, "---- REPORT ----");
   /* Header Vertical*/
   for (i = 0; i < length(); ++i)
   {
     sprintf(reportID, "%d", i + 1);
-    al_draw_text(font, al_map_rgb(205, 40, 83), 10, step_Vertical, 0, reportID);
+    al_draw_text(font, al_map_rgb(178, 178, 178), 10, step_Vertical, 0, reportID);
     step_Vertical = step_Vertical + 20;
   }
-  step_Vertical = 180;
+  step_Vertical = 30;
   /* Columns Data */
   struct report *ptrReportColumns = head_report;
+  int iterations = 0; // 20
   while (ptrReportColumns != NULL)
   {
-    new_step_Vertical = step_Vertical + (20 * ptrReportColumns->data);
-    if (new_step_Vertical != 180)
+    if (iterations > 20)
     {
-      al_draw_text(font, al_map_rgb(205, 40, 83), step_Horizontal, new_step_Vertical, 0, "X");
+      break;
+    }
+    iterations++;
+    new_step_Vertical = step_Vertical + (20 * ptrReportColumns->data);
+    if (new_step_Vertical != 30)
+    {
+      al_draw_text(font, al_map_rgb(195, 145, 220), step_Horizontal, new_step_Vertical, 0, "X");
     }
 
     step_Horizontal = step_Horizontal + 30;
@@ -755,6 +765,7 @@ code HandleEvent(ALLEGRO_EVENT ev)
     if (ev.keyboard.keycode == ALLEGRO_KEY_X)
     {
       printf("FIN\n");
+      printReportConsole();
       return EXIT_SUCCESS;
     }
     else if (ev.keyboard.keycode == ALLEGRO_KEY_S)
