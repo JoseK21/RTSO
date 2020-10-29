@@ -74,6 +74,7 @@ char energyLine[10] = "";
 
 ALLEGRO_BITMAP *martian_img;
 ALLEGRO_DISPLAY *display;
+ALLEGRO_FONT *font;
 #define BLACK (al_map_rgb(0, 0, 0))
 #define POINT 0, 0, 0
 static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg);
@@ -88,17 +89,51 @@ static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg);
 #define CODE_FAILURE EXIT_FAILURE
 typedef int code;
 code HandleEvent(ALLEGRO_EVENT ev);
+void endGame();
+void freeMartians();
+void clearListMartians();
+// ---------------------------------------------------------------------------
+// Header of REDRAW HANDLER Module
+// ---------------------------------------------------------------------------
+int length();
+bool REDRAW_IS_READY;
+void RedrawSetReady(void);
+void RedrawClearReady(void);
+bool RedrawIsReady(void);
+void RedrawDo(); // to be defined in Implementation of EVENT HANDLER Module
+
 // ---------------------------------------------------------------------------
 /* REPORT */
 void printReport()
 {
-  //al_clear_to_color(BLACK);
-  //al_flip_display();
 
+  int step_Vertical = 200;
+  int step_Horizontal = 30;
+
+  char reportID[5];
+
+  /* Header Vertical*/
+  struct report *ptrReportHeader = head_report;
+  while (ptrReportHeader != NULL)
+  {
+    sprintf(reportID, "%d", ptrReportHeader->data);
+    al_draw_text(font, al_map_rgb(205, 40, 83), 10, step_Vertical, 0, "Mode: ");
+    printf("|%d\n", ptrReportHeader->data);
+    step_Vertical = step_Vertical + 20;
+    ptrReportHeader = ptrReportHeader->next;
+  }
+  /* Columns Data */
+  struct report *ptrReportColumns = head_report;
+  while (ptrReportColumns != NULL)
+  {
+    ptrReportColumns = ptrReportColumns->next;
+  }
+}
+
+void printReportConsole()
+{
   struct report *ptrReport = head_report;
   printf("\nREPORT \n< ");
-
-  //start from the beginning
   while (ptrReport != NULL)
   {
     printf("|%d", ptrReport->data);
@@ -133,15 +168,6 @@ void addLast(struct report **head, int val)
   }
 }
 
-// ---------------------------------------------------------------------------
-// Header of REDRAW HANDLER Module
-// ---------------------------------------------------------------------------
-int length();
-bool REDRAW_IS_READY;
-void RedrawSetReady(void);
-void RedrawClearReady(void);
-bool RedrawIsReady(void);
-void RedrawDo(); // to be defined in Implementation of EVENT HANDLER Module
 // ---------------------------------------------------------------------------
 
 struct node *head = NULL;
@@ -180,7 +206,7 @@ void renderListMartians()
   while (martianTemp != NULL) //start from the beginning
   {
     RedrawDo(martianTemp, martian_img); // Pain image martian on screen
-    martianTemp = martianTemp->next; // Follow martian
+    martianTemp = martianTemp->next;    // Follow martian
   }
 }
 
@@ -221,7 +247,7 @@ void addMartian(int energy, int period)
   head = link;       //point first to new first node
   ALLEGRO_THREAD *martianThread_ = al_create_thread(Func_Thread, link);
   link->thread_id = martianThread_; // Add ID Thread to martian struct
-  printf("\nMartian inserted...\n");
+  printf("\nNew Martian...\n");
   al_start_thread(martianThread_); // Start Martian Thread
 }
 
@@ -274,8 +300,7 @@ struct node *findLessEnergyMartian()
       {
         //puts("\nAll News");
       }
-      else
-      {
+      else {
         energy_1 = martianTemp->energy;
         current = martianTemp;
         //puts("\n-------");
@@ -286,7 +311,6 @@ struct node *findLessEnergyMartian()
     if (martianTemp->energy <= energy_1 && martianTemp->isDone == false && martianTemp->energy != 0) // martianTemp->isReady_New = true;
     {
       energy_1 = martianTemp->energy;
-
       current = martianTemp;
     }
 
@@ -440,7 +464,7 @@ int main(int argc, char *argv[])
     puts("couldn't initialize image addon");
     return 1;
   }
-  ALLEGRO_FONT *font = al_create_builtin_font(); // Font Styles
+  font = al_create_builtin_font(); // Font Styles
   if (!font)
   {
     puts("couldn't initialize font");
@@ -557,7 +581,7 @@ int main(int argc, char *argv[])
               foundLessEM->energy--;               // Martian Movement
               al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
 
-              printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d -> %d \n", sGame, martianID, foundLessEM->energy + 1, foundLessEM->energy);
+              //printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d -> %d \n", sGame, martianID, foundLessEM->energy + 1, foundLessEM->energy);
 
               al_lock_mutex(foundLessEM->mutex); // Lock Mutex
               if (foundLessEM->energy == 0)
@@ -618,7 +642,45 @@ int main(int argc, char *argv[])
     code = HandleEvent(ev);
   }
 
+  /* Print Report */
+
+  al_clear_to_color(al_map_rgb(0, 0, 0));
+  //al_draw_text(font, al_map_rgb(255, 255, 255), 0, 0, 0, "Hello world!");
+  //  al_flip_display();
+
+  int step_Vertical = 200;
+  int step_Horizontal = 30;
+  int new_step_Vertical = 0;
+
+  char reportID[5];
+  int i;
+
+  /* Header Vertical*/
+  for (i = 0; i < length(); ++i)
+  {
+    sprintf(reportID, "%d", i + 1);
+    al_draw_text(font, al_map_rgb(205, 40, 83), 10, step_Vertical, 0, reportID);
+    step_Vertical = step_Vertical + 20;
+  }
+  step_Vertical = 180;
+  /* Columns Data */
+  struct report *ptrReportColumns = head_report;
+  while (ptrReportColumns != NULL)
+  {
+    new_step_Vertical = step_Vertical + (20 * ptrReportColumns->data);
+    if (new_step_Vertical != 180)
+    {
+      al_draw_text(font, al_map_rgb(205, 40, 83), step_Horizontal, new_step_Vertical, 0, "X");
+    }
+
+    step_Horizontal = step_Horizontal + 30;
+    ptrReportColumns = ptrReportColumns->next;
+  }
+
+  al_flip_display();
+
   // Clean up resources and exit with appropriate code
+
   endGame();
   freeMartians();      // Free source thread (Martian List)
   clearListMartians(); // Delete Martian List
@@ -654,6 +716,7 @@ static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg)
     if (active) // && martianTemp->energy != 0
     {
       al_lock_mutex(_martianData->mutex);
+      // Logica del laberinto HERE
       if (mw == 'X')
         _martianData->posiX += INCVAL;
       else
@@ -683,7 +746,6 @@ code HandleEvent(ALLEGRO_EVENT ev)
     if (ev.keyboard.keycode == ALLEGRO_KEY_X)
     {
       printf("FIN\n");
-      printReport();
       return EXIT_SUCCESS;
     }
     else if (ev.keyboard.keycode == ALLEGRO_KEY_S)
@@ -693,7 +755,7 @@ code HandleEvent(ALLEGRO_EVENT ev)
     }
     else if (ev.keyboard.keycode == ALLEGRO_KEY_R)
     {
-      printReport();
+      printReportConsole();
     }
     else if (ev.keyboard.keycode == ALLEGRO_KEY_L)
       printListMartians();
