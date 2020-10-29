@@ -68,8 +68,14 @@ int period = 0;
 int __algorithm;
 int __mode;
 int __start_auto = 0; // 0 : false
-int all_news = 0;     // All Thread (Martians) are ready
-int is_all_news = 0;  // All Thread (Martians) are ready
+int __ok = 0;         // 0 : false
+
+float __RM_u = 0;  // 0 : false
+float __RM_Ci = 0; // 0 : false
+float __RM_Pi = 0; // 0 : false
+
+int all_news = 0;    // All Thread (Martians) are ready
+int is_all_news = 0; // All Thread (Martians) are ready
 char energyLine[10] = "";
 
 ALLEGRO_BITMAP *martian_img;
@@ -92,6 +98,7 @@ code HandleEvent(ALLEGRO_EVENT ev);
 void endGame();
 void freeMartians();
 void clearListMartians();
+float formuleRM();
 // ---------------------------------------------------------------------------
 // Header of REDRAW HANDLER Module
 // ---------------------------------------------------------------------------
@@ -228,6 +235,11 @@ void clearListMartians()
 //insert link at the first location
 void addMartian(int energy, int period)
 {
+
+  __RM_Ci = __RM_Ci + energy;
+  __RM_Pi = __RM_Pi + period;
+
+  __RM_u = __RM_Ci / __RM_Pi;
   node *link = (node *)malloc(sizeof(node)); //create a link
 
   assert(link);
@@ -300,7 +312,8 @@ struct node *findLessEnergyMartian()
       {
         //puts("\nAll News");
       }
-      else {
+      else
+      {
         energy_1 = martianTemp->energy;
         current = martianTemp;
         //puts("\n-------");
@@ -535,15 +548,6 @@ int main(int argc, char *argv[])
           {
             strncpy(energyLine, "", 10);
           }
-          /*         u = formuleRM();
-        if (u != -1 && u <= 0.69314718056)
-        {
-          printf("Si calendarizable u: %f\n", u);
-        }
-        else
-        {
-          printf("No (Error RM) u: %f\n", u);
-        } */
 
           if (length() != 0) // valida si existe un hilo anterior (para detenerlo)
           {
@@ -607,6 +611,11 @@ int main(int argc, char *argv[])
           }
         }
         renderListMartians();
+        // printf("\t\t\t__RM_u : %f\n", __RM_u);
+        if (__RM_u > 0 && __RM_u <= 0.69314718056)
+          al_draw_text(font, al_map_rgb(30, 180, 40), 580, 590, 0, "Ok");
+        else
+          al_draw_text(font, al_map_rgb(153, 0, 0), 580, 590, 0, "X");
       }
 
       if (martianID > 0)
