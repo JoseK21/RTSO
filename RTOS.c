@@ -332,6 +332,29 @@ struct node *findLessEnergyMartian()
   return current; //if energy found, return the current Link
 }
 
+struct node *findLessEnergyMartian___TEST()
+{
+  if (head == NULL) //if list is empty
+    return NULL;
+
+  node *current = head;       //start from the first link
+  int energy_1 = 9999;        // Defaul Value
+  node *martianTemp = head;   // Header List
+  while (martianTemp != NULL) //start from the beginning
+  {
+    if (martianTemp->static_energy <= energy_1 && martianTemp->isDone == false ) // martianTemp->isReady_New = true;
+    {
+      energy_1 = martianTemp->static_energy;
+      current = martianTemp;
+    }
+    martianTemp = martianTemp->next; // Follow martian
+  }
+
+  if (current->isDone == true)
+    return NULL;  //if energy found, return the current Link
+  return current; //if energy found, return the current Link
+}
+
 void resetPeriodTime(int sGame)
 {
   if (head != NULL)
@@ -528,13 +551,13 @@ int main(int argc, char *argv[])
   node *foundLessEM = NULL;
 
   /* TEST */
-  addMartian(1, 6);
+/*   addMartian(1, 6);
   addMartian(2, 9);
-  addMartian(6, 18);
+  addMartian(6, 18); */
 
-/*   addMartian(1, 3);
+  addMartian(1, 3);
   addMartian(2, 5);
-  addMartian(2, 9); */
+  addMartian(2, 9);
   __start_auto = 1;
   /* END TEST */
 
@@ -560,7 +583,7 @@ int main(int argc, char *argv[])
           {
 
             stopAllThread();
-            foundLessEM = findLessEnergyMartian();
+            foundLessEM = findLessEnergyMartian___TEST();
             if (foundLessEM != NULL)
             {
               martianID = foundLessEM->id;
