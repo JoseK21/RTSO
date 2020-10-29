@@ -22,6 +22,7 @@ typedef struct node //struct node
   char modifyWhich; // which variable to modify, 'X' or 'Y'
   bool isReady_New;
   bool isDone;
+  bool isActive;
   bool inProgress;
   ALLEGRO_THREAD *thread_id;
   struct node *next;
@@ -48,6 +49,7 @@ struct report *head_report = NULL;
         .modifyWhich = '\0',  \
         .isReady_New = false, \
         .isDone = false,      \
+        .isActive = false,    \
         .inProgress = false,  \
         .next = NULL,         \
         .thread_id = NULL,    \
@@ -178,7 +180,17 @@ void renderListMartians()
   while (martianTemp != NULL) //start from the beginning
   {
     RedrawDo(martianTemp, martian_img); // Pain image martian on screen
-    martianTemp = martianTemp->next;    // Follow martian
+    martianTemp = martianTemp->next; // Follow martian
+  }
+}
+
+void stopAllThread()
+{
+  node *martianTemp = head;   // Header List
+  while (martianTemp != NULL) //start from the beginning
+  {
+    martianTemp->isActive = false;   // Follow martian
+    martianTemp = martianTemp->next; // Follow martian
   }
 }
 
@@ -225,7 +237,6 @@ int length()
   node *current;
   for (current = head; current != NULL; current = current->next)
     length++;
-  //printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Length: %d\n", length);
   return length;
 }
 
@@ -278,6 +289,7 @@ struct node *findLessEnergyMartian()
 
       current = martianTemp;
     }
+
     martianTemp = martianTemp->next; // Follow martian
   }
 
@@ -513,7 +525,7 @@ int main(int argc, char *argv[])
           {
             // Reset energy - period
             // resetPeriodTime(sGame);
-
+            stopAllThread();
             foundLessEM = findLessEnergyMartian();
             if (foundLessEM != NULL)
             {
@@ -523,11 +535,13 @@ int main(int argc, char *argv[])
               addLast(&head_report, martianID);
               // Set shared MARTIAN - LOGIC MAZE HERE - EDIT modifyWhich
               //puts(" ");
-              al_lock_mutex(foundLessEM->mutex); // Lock Mutex
-              foundLessEM->modifyWhich = 'X';    // Martian Movement
-              foundLessEM->inProgress = true;    // Martian Thread
-              foundLessEM->isDone = false;       // Martian Thread
-              foundLessEM->isReady_New = false;  // Martian in used
+              al_lock_mutex(foundLessEM->mutex);   // Lock Mutex
+              foundLessEM->modifyWhich = 'X';      // Martian Movement
+              foundLessEM->inProgress = true;      // Martian Thread
+              foundLessEM->isActive = true;        // Martian Thread
+              foundLessEM->isDone = false;         // Martian Thread
+              foundLessEM->isReady_New = false;    // Martian in used
+              al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
 
               if (preview_martianID != martianID)
               {
@@ -539,10 +553,13 @@ int main(int argc, char *argv[])
               {
                 strncat(energyLine, &ch, 1);
               }
+              al_lock_mutex(foundLessEM->mutex);   // Lock Mutex
+              foundLessEM->energy--;               // Martian Movement
+              al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
 
-              foundLessEM->energy--; // Martian Movement
-              //printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d -> %d \n", sGame, martianID, foundLessEM->energy + 1, foundLessEM->energy);
+              printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d -> %d \n", sGame, martianID, foundLessEM->energy + 1, foundLessEM->energy);
 
+              al_lock_mutex(foundLessEM->mutex); // Lock Mutex
               if (foundLessEM->energy == 0)
               {
                 foundLessEM->isDone = true;      // Martian Thread
@@ -624,9 +641,17 @@ static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg)
   char mw = _martianData->modifyWhich;
   al_broadcast_cond(_martianData->cond);
   al_unlock_mutex(_martianData->mutex);
+  bool active;
+  int ener;
   while (!al_get_thread_should_stop(thr))
   {
-    if (_martianData->inProgress == true && _martianData->isDone == false)
+    //  if (_martianData->inProgress == true && _martianData->isDone == false && _martianData->energy != 0)  // && martianTemp->energy != 0
+    al_lock_mutex(_martianData->mutex);
+    active = _martianData->isActive;
+
+    al_unlock_mutex(_martianData->mutex);
+
+    if (active) // && martianTemp->energy != 0
     {
       al_lock_mutex(_martianData->mutex);
       if (mw == 'X')
