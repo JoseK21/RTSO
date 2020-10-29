@@ -68,6 +68,7 @@ int __mode;
 int __start_auto = 0; // 0 : false
 int all_news = 0;     // All Thread (Martians) are ready
 int is_all_news = 0;  // All Thread (Martians) are ready
+char energyLine[10] = "";
 
 ALLEGRO_BITMAP *martian_img;
 ALLEGRO_DISPLAY *display;
@@ -89,6 +90,9 @@ code HandleEvent(ALLEGRO_EVENT ev);
 /* REPORT */
 void printReport()
 {
+  //al_clear_to_color(BLACK);
+  //al_flip_display();
+
   struct report *ptrReport = head_report;
   printf("\nREPORT \n< ");
 
@@ -257,11 +261,13 @@ struct node *findLessEnergyMartian()
       //printf("^all_news^ : %d", all_news);
       if (is_all_news == 1)
       {
-        puts("\nAll News");
-      }else {
+        //puts("\nAll News");
+      }
+      else
+      {
         energy_1 = martianTemp->energy;
         current = martianTemp;
-        puts("\n-------");
+        //puts("\n-------");
         break;
       }
     }
@@ -287,12 +293,12 @@ void resetPeriodTime(int sGame)
     node *martianTemp = head; // Header List
     int residuo = 0;
     int all_news = 0;
-    puts("");
+    //puts("");
     while (martianTemp != NULL) //start from the beginning
     {
       residuo = sGame % martianTemp->period;
       all_news = all_news + residuo;
-      printf("ID >> %d E:%d P:%d \tisDone: %d inProgress: %d \tResiduo : %d ", martianTemp->id, martianTemp->energy, martianTemp->period, martianTemp->isDone, martianTemp->inProgress, residuo);
+      //printf("ID >> %d E:%d P:%d \tisDone: %d inProgress: %d \tResiduo : %d ", martianTemp->id, martianTemp->energy, martianTemp->period, martianTemp->isDone, martianTemp->inProgress, residuo);
       if (residuo == 0)
       {
         al_lock_mutex(martianTemp->mutex); // Lock Mutex
@@ -304,17 +310,18 @@ void resetPeriodTime(int sGame)
         //printf("*** \n", martianTemp->id);
         al_unlock_mutex(martianTemp->mutex); // UnLock Mutex
 
-        printf("***\n");
+        // printf("***\n");
       }
-      else
-        puts("");
+      /*       else
+        puts(""); */
 
       martianTemp = martianTemp->next; // Follow martian
     }
     if (all_news == 0)
     {
       is_all_news = 1; // true
-      printf("\n^all_news^ : %d", all_news);
+                       // printf("\n^all_news^ : %d", all_news);
+      strncpy(energyLine, "", 10);
     }
     else
     {
@@ -357,7 +364,7 @@ int parameterAlgorithm(int argc, char *argv[])
 {
   if (argc != 3)
   {
-    printf("Atention!, Please enter two input values (Algorithm and Mode)\n");
+    puts("Atention!, Please enter two input values (Algorithm and Mode)");
     return 0;
   }
 
@@ -376,7 +383,7 @@ int parameterAlgorithm(int argc, char *argv[])
     }
     else
     {
-      printf("Mode error: <Manual or Auto>\n");
+      puts("Mode error: <Manual or Auto>");
       return 0;
     }
   }
@@ -395,13 +402,13 @@ int parameterAlgorithm(int argc, char *argv[])
     }
     else
     {
-      printf("Mode error: <Manual or Auto>\n");
+      puts("Mode error: <Manual or Auto>");
       return 0;
     }
   }
   else
   {
-    printf("Algorithm error: <RM or EDF>\n");
+    puts("Algorithm error: <RM or EDF>");
     return 0;
   }
 }
@@ -413,18 +420,18 @@ int main(int argc, char *argv[])
   al_init();
   if (!al_install_keyboard())
   {
-    printf("couldn't initialize keyboard\n");
+    puts("couldn't initialize keyboard");
     return 1;
   }
   if (!al_init_image_addon())
   {
-    printf("couldn't initialize image addon\n");
+    puts("couldn't initialize image addon");
     return 1;
   }
   ALLEGRO_FONT *font = al_create_builtin_font(); // Font Styles
   if (!font)
   {
-    printf("couldn't initialize font\n");
+    puts("couldn't initialize font");
     return 1;
   }
 
@@ -452,10 +459,12 @@ int main(int argc, char *argv[])
   char speriod[5];
   char smode[10];
   char smmove[10];
-  char energyLine[10] = "";
+
   int s30 = 0;
   int sGame = 0;
   int martianID = -1;
+  int preview_martianID = -1;
+
   char ch = '>';
   int current_seconds = 0;
   int preview_energy = 0;
@@ -487,7 +496,9 @@ int main(int argc, char *argv[])
           sGame++;
 
           if (strlen(energyLine) > 9)
+          {
             strncpy(energyLine, "", 10);
+          }
           /*         u = formuleRM();
         if (u != -1 && u <= 0.69314718056)
         {
@@ -507,18 +518,30 @@ int main(int argc, char *argv[])
             if (foundLessEM != NULL)
             {
               martianID = foundLessEM->id;
+
               preview_energy = foundLessEM->energy;
               addLast(&head_report, martianID);
               // Set shared MARTIAN - LOGIC MAZE HERE - EDIT modifyWhich
-              puts(" ");
+              //puts(" ");
               al_lock_mutex(foundLessEM->mutex); // Lock Mutex
               foundLessEM->modifyWhich = 'X';    // Martian Movement
               foundLessEM->inProgress = true;    // Martian Thread
               foundLessEM->isDone = false;       // Martian Thread
               foundLessEM->isReady_New = false;  // Martian in used
 
+              if (preview_martianID != martianID)
+              {
+                preview_martianID = martianID;
+                strncpy(energyLine, "", 10);
+                strncat(energyLine, &ch, 1);
+              }
+              else
+              {
+                strncat(energyLine, &ch, 1);
+              }
+
               foundLessEM->energy--; // Martian Movement
-              printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d -> %d \n", sGame, martianID, foundLessEM->energy + 1, foundLessEM->energy);
+              //printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d -> %d \n", sGame, martianID, foundLessEM->energy + 1, foundLessEM->energy);
 
               if (foundLessEM->energy == 0)
               {
@@ -528,29 +551,19 @@ int main(int argc, char *argv[])
               else
               {
                 foundLessEM->inProgress = true; // Martian Thread
-                //foundLessEM->isDone = true; // Martian Thread
               }
 
-              //current_seconds = foundLessEM->energy;
               al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
-              strncat(energyLine, &ch, 1);
             }
             else
             {
               addLast(&head_report, 0);
               current_seconds = 0;
+              martianID = 0;
             }
 
             resetPeriodTime(sGame);
           }
-          /*          else if (current_seconds > 0)
-          {
-            al_lock_mutex(foundLessEM->mutex); // Lock Mutex
-            foundLessEM->energy--;             // Martian Movement
-            current_seconds = foundLessEM->energy;
-            al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
-            strncat(energyLine, &ch, 1);
-          } */
         }
         renderListMartians();
       }
@@ -559,6 +572,8 @@ int main(int argc, char *argv[])
       {
         sprintf(smode, "%d", martianID);
         al_draw_text(font, al_map_rgb(195, 145, 220), 440, 10, 0, smode);
+
+        al_draw_text(font, al_map_rgb(195, 145, 220), 520, 10, 0, energyLine);
       }
 
       al_draw_text(font, al_map_rgb(70, 70, 70), 10, 590, 0, "Mode: ");
@@ -577,9 +592,7 @@ int main(int argc, char *argv[])
         al_draw_text(font, al_map_rgb(195, 145, 220), 108, 10, 0, "Period: ");
         al_draw_text(font, al_map_rgb(255, 255, 255), 170, 10, 0, speriod);
       }
-
       al_draw_text(font, al_map_rgb(178, 178, 178), 460, 10, 0, "ENERGY: ");
-      al_draw_text(font, al_map_rgb(195, 145, 220), 520, 10, 0, energyLine);
 
       al_flip_display();
     }
