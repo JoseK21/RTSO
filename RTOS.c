@@ -20,6 +20,7 @@ typedef struct node //struct node
   int static_energy;
   int id;
   char modifyWhich; // which variable to modify, 'X' or 'Y'
+  bool isReady_New;
   bool isDone;
   bool inProgress;
   ALLEGRO_THREAD *thread_id;
@@ -34,21 +35,22 @@ struct report
 
 struct report *head_report = NULL;
 
-#define DATA_NEWINIT (       \
-    (node){                  \
-        .mutex = NULL,       \
-        .cond = NULL,        \
-        .posiX = 0,          \
-        .posiY = 0,          \
-        .period = 0,         \
-        .energy = 0,         \
-        .static_energy = 0,  \
-        .id = 0,             \
-        .modifyWhich = '\0', \
-        .isDone = false,     \
-        .inProgress = false, \
-        .next = NULL,        \
-        .thread_id = NULL,   \
+#define DATA_NEWINIT (        \
+    (node){                   \
+        .mutex = NULL,        \
+        .cond = NULL,         \
+        .posiX = 0,           \
+        .posiY = 0,           \
+        .period = 0,          \
+        .energy = 0,          \
+        .static_energy = 0,   \
+        .id = 0,              \
+        .modifyWhich = '\0',  \
+        .isReady_New = false, \
+        .isDone = false,      \
+        .inProgress = false,  \
+        .next = NULL,         \
+        .thread_id = NULL,    \
     })
 
 // ---------------------------------------------------------------------------
@@ -86,15 +88,15 @@ code HandleEvent(ALLEGRO_EVENT ev);
 void printReport()
 {
   struct report *ptrReport = head_report;
-  printf("\n< ");
+  printf("\nREPORT \n< ");
 
   //start from the beginning
   while (ptrReport != NULL)
   {
-    printf("[%d]", ptrReport->data);
+    printf("|%d", ptrReport->data);
     ptrReport = ptrReport->next;
   }
-  printf(" >\n");
+  printf("| >\n");
 }
 
 void addLast(struct report **head, int val)
@@ -194,6 +196,7 @@ void addMartian(int energy, int period)
   link->static_energy = energy;
   link->period = period;
   link->id = length() + 1;
+  link->isReady_New = false;
   link->inProgress = false;
   link->isDone = false;
   link->next = head; //point it to old first node
@@ -247,7 +250,38 @@ struct node *findLessEnergyMartian()
   node *martianTemp = head;   // Header List
   while (martianTemp != NULL) //start from the beginning
   {
-    if (martianTemp->energy <= energy_1 && martianTemp->isDone == false && martianTemp->energy != 0)
+    if (martianTemp->isReady_New == true)
+    {
+      energy_1 = martianTemp->energy;
+      current = martianTemp;
+      break;
+    }
+
+    if (martianTemp->energy <= energy_1 && martianTemp->isDone == false && martianTemp->energy != 0) // martianTemp->isReady_New = true;
+    {
+      energy_1 = martianTemp->energy;
+
+      current = martianTemp;
+    }
+    martianTemp = martianTemp->next; // Follow martian
+  }
+
+  if (current->isDone == true)
+    return NULL;  //if energy found, return the current Link
+  return current; //if energy found, return the current Link
+}
+
+struct node *findNewMartian()
+{
+  if (head == NULL) //if list is empty
+    return NULL;
+
+  node *current = head;       //start from the first link
+  int energy_1 = 1000;        // Defaul Value
+  node *martianTemp = head;   // Header List
+  while (martianTemp != NULL) //start from the beginning
+  {
+    if (martianTemp->isDone == false && martianTemp->isReady_New == true) // martianTemp->isReady_New = true;
     {
       energy_1 = martianTemp->energy;
       current = martianTemp;
@@ -274,6 +308,7 @@ void resetPeriodTime(int sGame)
       if (residuo == 0)
       {
         martianTemp->isDone = false;
+        martianTemp->isReady_New = true;
         martianTemp->energy = martianTemp->static_energy;
         //printf("*** \n", martianTemp->id);
         printf("***");
@@ -475,7 +510,9 @@ int main(int argc, char *argv[])
               foundLessEM->modifyWhich = 'X';    // Martian Movement
               foundLessEM->inProgress = true;    // Martian Thread
               foundLessEM->isDone = false;       // Martian Thread
-              foundLessEM->energy--;             // Martian Movement
+              foundLessEM->isReady_New = false;  // Martian in used
+
+              foundLessEM->energy--; // Martian Movement
               printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d -> %d \n", sGame, martianID, foundLessEM->energy + 1, foundLessEM->energy);
 
               if (foundLessEM->energy == 0)
@@ -500,7 +537,6 @@ int main(int argc, char *argv[])
             }
 
             resetPeriodTime(sGame);
-
           }
           /*          else if (current_seconds > 0)
           {
