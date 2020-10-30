@@ -18,7 +18,7 @@ typedef struct node //struct node
   int energy;
   int static_energy;
   int period;
-  int static_period;
+  int period_counter;
   int id;
   char modifyWhich; // which variable to modify, 'X' or 'Y'
   bool isReady_New;
@@ -44,7 +44,7 @@ struct report *head_report = NULL;
         .posiX = 0,           \
         .posiY = 0,           \
         .period = 0,          \
-        .static_period = 0,   \
+        .period_counter = 0,  \
         .energy = 0,          \
         .static_energy = 0,   \
         .id = 0,              \
@@ -237,7 +237,6 @@ void clearListMartians()
 //insert link at the first location
 void addMartian(int energy, int period)
 {
-
   __RM_Ci = __RM_Ci + energy;
   __RM_Pi = __RM_Pi + period;
 
@@ -253,7 +252,7 @@ void addMartian(int energy, int period)
   link->energy = energy;
   link->static_energy = energy;
   link->period = period;
-  link->static_period = period;
+  link->period_counter = period;
   link->id = length() + 1;
   link->isReady_New = false;
   link->inProgress = false;
@@ -304,13 +303,22 @@ struct node *findEDF_Martian()
     return NULL;
 
   node *current = head;       //start from the first link
-  int energy_1 = 9999;        // Defaul Value
+  int p_counter = 9999;       // Defaul Value
   node *martianTemp = head;   // Header List
   while (martianTemp != NULL) //start from the beginning
   {
-    if (martianTemp->energy <= energy_1 && martianTemp->isDone == 0) // martianTemp->isReady_New = true;
+    printf("%d. E:%d P:%d CounterP:%d \tisDone: %d isReady_New: %d inProgress: %d  isActive: %d\n",
+           martianTemp->id,
+           martianTemp->energy,
+           martianTemp->period,
+           martianTemp->period_counter,
+           martianTemp->isDone,
+           martianTemp->isReady_New,
+           martianTemp->inProgress,
+           martianTemp->isActive);
+    if (martianTemp->period_counter < p_counter && martianTemp->isDone == 0) // martianTemp->isReady_New = true;
     {
-      energy_1 = martianTemp->static_energy;
+      p_counter = martianTemp->period_counter;
       current = martianTemp;
     }
     martianTemp = martianTemp->next; // Follow martian
@@ -354,7 +362,7 @@ void resetEnergy(int sGame)
     while (martianTemp != NULL) //start from the beginning
     {
       residuo = sGame % martianTemp->period;
-      printf("%d. E:%d P:%d \tisDone: %d isReady_New: %d inProgress: %d  isActive: %d  \tResiduo : %d ",
+      /*       printf("%d. E:%d P:%d \tisDone: %d isReady_New: %d inProgress: %d  isActive: %d  \tResiduo : %d ",
              martianTemp->id,
              martianTemp->energy,
              martianTemp->period,
@@ -362,7 +370,7 @@ void resetEnergy(int sGame)
              martianTemp->isReady_New,
              martianTemp->inProgress,
              martianTemp->isActive,
-             residuo);
+             residuo); */
 
       if (residuo == 0)
       {
@@ -371,6 +379,7 @@ void resetEnergy(int sGame)
         martianTemp->isReady_New = true;
         martianTemp->inProgress = false;
         martianTemp->energy = martianTemp->static_energy;
+        martianTemp->period_counter = martianTemp->period;
         al_unlock_mutex(martianTemp->mutex); // UnLock Mutex
 
         printf("***\n");
@@ -379,6 +388,23 @@ void resetEnergy(int sGame)
         puts("");
 
       martianTemp = martianTemp->next; // Follow martian
+    }
+  }
+}
+
+void reduceCounterPeriod()
+{
+  if (head != NULL)
+  {
+    node *martianTemp = head;   // Header List
+    while (martianTemp != NULL) //start from the beginning
+    {
+      al_lock_mutex(martianTemp->mutex); // Lock Mute
+      martianTemp->period_counter--;
+      if (martianTemp->period_counter == 0)
+        martianTemp->period_counter = martianTemp->period;
+      al_unlock_mutex(martianTemp->mutex); // UnLock Mutex
+      martianTemp = martianTemp->next;     // Follow martian
     }
   }
 }
@@ -526,21 +552,29 @@ int main(int argc, char *argv[])
   node *martian_found = NULL;
 
   /* RM */
-  /*   addMartian(1, 6);
+
+  // PDF Doc
+  /*
+  addMartian(1, 6);
   addMartian(2, 9);
-  addMartian(6, 18); */
+  addMartian(6, 18); 
+  */
 
   /*   addMartian(1, 3);
   addMartian(2, 5);
   addMartian(2, 9); */
 
   // EDF
-  /*   addMartian(1, 4);
+  /* addMartian(1, 4);
   addMartian(2, 6);
   addMartian(3, 8); */
 
-  addMartian(3, 6);
-  addMartian(4, 9);
+  /* addMartian(3, 6);
+  addMartian(4, 9); */
+  // PDF Doc
+  addMartian(10, 30);
+  addMartian(15, 40);
+  addMartian(5, 50);
 
   __start_auto = 1;
   /* END TEST */
@@ -575,6 +609,8 @@ int main(int argc, char *argv[])
             if (martian_found != NULL)
             {
               martianID = martian_found->id;
+              printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d \n", sGame, martianID, martian_found->energy);
+
               addLast(&head_report, martianID);
               al_lock_mutex(martian_found->mutex);   // Lock Mutex
               martian_found->modifyWhich = 'X';      // Martian Movement
@@ -595,13 +631,14 @@ int main(int argc, char *argv[])
                 strncat(energyLine, &ch, 1);
               }
               puts("----------------------------------------------------------------------------------------------------------------");
-              printf("\nCURRENT - (%d) s \t\tFind ID : %d \t\tEnergy : %d \n", sGame, martianID, martian_found->energy);
+              //printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d \n", sGame, martianID, martian_found->energy);
 
               al_lock_mutex(martian_found->mutex);   // Lock Mutex
               martian_found->energy--;               // Martian Movement
               al_unlock_mutex(martian_found->mutex); // UnLock Mutex
+              reduceCounterPeriod();
 
-              printf("\nUPDATED - (%d) s \t\tFind ID : %d \t\tEnergy : %d \n", sGame, martianID, martian_found->energy);
+              //printf("\nUPDATED - (%d) s \t\tFind ID : %d \t\tEnergy : %d \n", sGame, martianID, martian_found->energy);
 
               al_lock_mutex(martian_found->mutex); // Lock Mutex
 
