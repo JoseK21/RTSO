@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <matrix.h>
+#include <time.h>
 // ---------------------------------------------------------------------------
 // Header of MARTIAN module
 // ---------------------------------------------------------------------------
@@ -14,8 +15,8 @@ typedef struct node //struct node
 {
   ALLEGRO_MUTEX *mutex;
   ALLEGRO_COND *cond;
-  int posiX;
-  int posiY;
+  int column;
+  int row;
   int energy;
   int static_energy;
   int period;
@@ -42,8 +43,8 @@ struct report *head_report = NULL;
     (node){                   \
         .mutex = NULL,        \
         .cond = NULL,         \
-        .posiX = 0,           \
-        .posiY = 224,         \
+        .column = 0,          \
+        .row = 224,           \
         .period = 0,          \
         .period_counter = 0,  \
         .energy = 0,          \
@@ -111,6 +112,15 @@ void RedrawSetReady(void);
 void RedrawClearReady(void);
 bool RedrawIsReady(void);
 void RedrawDo(); // to be defined in Implementation of EVENT HANDLER Module
+
+bool isCollisioned(int x1, int x2, int y1, int y2)
+{
+  if (x1 < (x2 + 32) && (x1 + 32) > x2 && y1 < (y2 + 32) && (y1 + 32) > y2)
+  {
+    return true;
+  }
+  return false;
+}
 
 // ---------------------------------------------------------------------------
 /* REPORT */
@@ -359,7 +369,7 @@ void resetEnergy(int sGame)
   {
     node *martianTemp = head; // Header List
     int residuo = 0;
-    puts("");
+    // puts("");
     while (martianTemp != NULL) //start from the beginning
     {
       residuo = sGame % martianTemp->period;
@@ -383,10 +393,10 @@ void resetEnergy(int sGame)
         martianTemp->period_counter = martianTemp->period;
         al_unlock_mutex(martianTemp->mutex); // UnLock Mutex
 
-        printf("***\n");
+        // printf("***\n");
       }
-      else
-        puts("");
+      //else
+      // puts("");
 
       martianTemp = martianTemp->next; // Follow martian
     }
@@ -556,9 +566,9 @@ int main(int argc, char *argv[])
   /* --------- RM --------- */
 
   // PDF Doc
-  addMartian(1, 6);
+/*   addMartian(1, 6);
   addMartian(2, 9);
-  addMartian(6, 18);
+  addMartian(6, 18); */
 
   /*   
   addMartian(1, 3);
@@ -569,11 +579,11 @@ int main(int argc, char *argv[])
   /* --------- EDF --------- */
 
   // PDF Doc
-  /*   
+    
   addMartian(10, 30);
   addMartian(15, 40);
   addMartian(5, 50); 
-  */
+ 
 
   /* 
   addMartian(1, 4);
@@ -619,31 +629,10 @@ int main(int argc, char *argv[])
             if (martian_found != NULL)
             {
               martianID = martian_found->id;
-              printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d \n", sGame, martianID, martian_found->energy);
+              // printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d \n", sGame, martianID, martian_found->energy);
 
               addLast(&head_report, martianID);
-              al_lock_mutex(martian_found->mutex);                                  // Lock Mutex
-              if (MAZE_MATRIX[martian_found->posiY - 1][martian_found->posiX] == 1) // 1 : Espacio para caminar
-              {
-                martian_found->goTo = 1; // Martian Movement // U: Up - D:Down - R: Right - L:Left
-              }
-              else if (MAZE_MATRIX[martian_found->posiY][martian_found->posiX + 1] == 1) // 1 : Espacio para caminar
-              {
-                martian_found->goTo = 2; // Martian Movement // U: Up - D:Down - R: Right - L:Left
-              }
-              else if (MAZE_MATRIX[martian_found->posiY + 1][martian_found->posiX] == 1) // 1 : Espacio para caminar
-              {
-                martian_found->goTo = 3; // Martian Movement // U: Up - D:Down - R: Right - L:Left
-              }
-              else if (MAZE_MATRIX[martian_found->posiY][martian_found->posiX - 1] == 1) // 1 : Espacio para caminar
-              {
-                martian_found->goTo = 4; // Martian Movement // U: Up - D:Down - R: Right - L:Left
-              }
-              else
-              {
-                martian_found->goTo = 666;
-              }
-
+              al_lock_mutex(martian_found->mutex); // Lock Mutex
               //martian_found->goTo = 2;               // Martian Movement // U: Up - D:Down - R: Right - L:Left
               martian_found->inProgress = true;      // Martian Thread
               martian_found->isActive = true;        // Martian Thread
@@ -661,7 +650,7 @@ int main(int argc, char *argv[])
               {
                 strncat(energyLine, &ch, 1);
               }
-              puts("----------------------------------------------------------------------------------------------------------------");
+              // puts("----------------------------------------------------------------------------------------------------------------");
               //printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d \n", sGame, martianID, martian_found->energy);
 
               al_lock_mutex(martian_found->mutex);   // Lock Mutex
@@ -805,6 +794,7 @@ int main(int argc, char *argv[])
 
 #define INCVAL (0.1f)
 int st = 1;
+int go = 0;
 #define RESTVAL (0.01f)
 #define UNKNOWN_ERROR (0)
 static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg)
@@ -820,18 +810,37 @@ static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg)
     if (_martianData->isActive)
     {
       al_lock_mutex(_martianData->mutex);
-      if (_martianData->goTo == 1) // 'U' : 1
-        _martianData->posiY -= st;
-      else if (_martianData->goTo == 2) // 'R' : 2
-        _martianData->posiX += st;
-      else if (_martianData->goTo == 3) // 'D' : 3
-        _martianData->posiY += st;
-      else if (_martianData->goTo == 4) // 'L' : 4
-        _martianData->posiX -= st;
+
+      srand(time(0));
+      go = (rand() % 4) + 1;
+      //go = 1;
+/*       if (_martianData->id == 1)
+      {
+        printf("Row: %d \t Column: %d\n", _martianData->row, _martianData->column);
+        printf("Go: %d \n", go);
+      } */
+
+      if (go == 1 && MAZE_MATRIX_BIG[_martianData->row - 1][_martianData->column] == 1 && MAZE_MATRIX_BIG[_martianData->row - 1][_martianData->column + 31] == 1) // 1 : Espacio para caminar
+      {
+        _martianData->row -= st; // U: Up
+      }
+      else if (go == 2 && MAZE_MATRIX_BIG[_martianData->row][_martianData->column + 32] == 1 && MAZE_MATRIX_BIG[_martianData->row + 31][_martianData->column + 32] == 1) // 1 : Espacio para caminar
+      {
+        _martianData->column += st; //  R: Right
+      }
+      else if (go == 3 && MAZE_MATRIX_BIG[_martianData->row + 32][_martianData->column] == 1 && MAZE_MATRIX_BIG[_martianData->row + 32][_martianData->column + 31] == 1) // 1 : Espacio para caminar
+      {
+        _martianData->row += st; //  D:Down
+      }
+      else if (go == 4 && MAZE_MATRIX_BIG[_martianData->row][_martianData->column - 1] == 1 && MAZE_MATRIX_BIG[_martianData->row + 31][_martianData->column - 1] == 1) // 1 : Espacio para caminar
+      {
+        _martianData->column -= st; // L:Left
+      }
       else
       {
-        printf("\nERROR GO TO : %d\n\n", _martianData->goTo);
-        assert(UNKNOWN_ERROR);
+        /*  printf("\nERROR GO TO : %d\n\n", _martianData->goTo);
+        assert(UNKNOWN_ERROR); */
+        //_martianData->row += st; //  D:Down
       }
       al_unlock_mutex(_martianData->mutex);
       al_rest(RESTVAL);
@@ -908,8 +917,8 @@ code HandleEvent(ALLEGRO_EVENT ev)
 void RedrawDo(node *martianData, ALLEGRO_BITMAP *martian_img)
 {
   al_lock_mutex(martianData->mutex);
-  float X = martianData->posiX;
-  float Y = martianData->posiY;
+  float X = martianData->column;
+  float Y = martianData->row;
   al_unlock_mutex(martianData->mutex);
   al_draw_bitmap(martian_img, X, Y, 0);
 }
