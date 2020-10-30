@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <matrix.h>
 // ---------------------------------------------------------------------------
 // Header of MARTIAN module
 // ---------------------------------------------------------------------------
@@ -20,7 +21,7 @@ typedef struct node //struct node
   int period;
   int period_counter;
   int id;
-  char modifyWhich; // which variable to modify, 'X' or 'Y'
+  int goTo;
   bool isReady_New;
   bool isDone;
   bool isActive;
@@ -37,18 +38,18 @@ struct report
 
 struct report *head_report = NULL;
 
-#define DATA_NEWINIT (        \
+#define MARTIAN_DEFAULT (     \
     (node){                   \
         .mutex = NULL,        \
         .cond = NULL,         \
         .posiX = 0,           \
-        .posiY = 0,           \
+        .posiY = 224,         \
         .period = 0,          \
         .period_counter = 0,  \
         .energy = 0,          \
         .static_energy = 0,   \
         .id = 0,              \
-        .modifyWhich = '\0',  \
+        .goTo = 2,            \
         .isReady_New = false, \
         .isDone = false,      \
         .isActive = false,    \
@@ -219,7 +220,7 @@ void renderListMartians()
   }
 }
 
-void stopAllThread()
+void stopMartians()
 {
   node *martianTemp = head;   // Header List
   while (martianTemp != NULL) //start from the beginning
@@ -244,7 +245,7 @@ void addMartian(int energy, int period)
   node *link = (node *)malloc(sizeof(node)); //create a link
 
   assert(link);
-  *link = DATA_NEWINIT;            // Set default values
+  *link = MARTIAN_DEFAULT;         // Set default values
   link->mutex = al_create_mutex(); // Mutex
   link->cond = al_create_cond();   // Condition
   assert(link->mutex);
@@ -551,32 +552,40 @@ int main(int argc, char *argv[])
   ALLEGRO_THREAD *current_thread = NULL;
   node *martian_found = NULL;
 
-  /* RM */
+  /* --------- RM --------- */
 
   // PDF Doc
-  /*
   addMartian(1, 6);
   addMartian(2, 9);
-  addMartian(6, 18); 
+  addMartian(6, 18);
+
+  /*   
+  addMartian(1, 3);
+  addMartian(2, 5);
+  addMartian(2, 9); 
   */
 
-  /*   addMartian(1, 3);
-  addMartian(2, 5);
-  addMartian(2, 9); */
+  /* --------- EDF --------- */
 
-  // EDF
-  /* addMartian(1, 4);
-  addMartian(2, 6);
-  addMartian(3, 8); */
-
-  /* addMartian(3, 6);
-  addMartian(4, 9); */
   // PDF Doc
+  /*   
   addMartian(10, 30);
   addMartian(15, 40);
-  addMartian(5, 50);
+  addMartian(5, 50); 
+  */
 
-  __start_auto = 1;
+  /* 
+  addMartian(1, 4);
+  addMartian(2, 6);
+  addMartian(3, 8); 
+  */
+
+  /* 
+  addMartian(3, 6);
+  addMartian(4, 9); 
+  */
+
+  //__start_auto = 1;
   /* END TEST */
 
   while (code == CODE_CONTINUE)
@@ -599,7 +608,7 @@ int main(int argc, char *argv[])
 
           if (length() != 0) // valida si existe un hilo anterior (para detenerlo)
           {
-            stopAllThread();
+            stopMartians();
 
             if (__algorithm == 0)
               martian_found = findRM_Martian();
@@ -613,7 +622,7 @@ int main(int argc, char *argv[])
 
               addLast(&head_report, martianID);
               al_lock_mutex(martian_found->mutex);   // Lock Mutex
-              martian_found->modifyWhich = 'X';      // Martian Movement
+              martian_found->goTo = 2;               // Martian Movement // U: Up - D:Down - R: Right - L:Left
               martian_found->inProgress = true;      // Martian Thread
               martian_found->isActive = true;        // Martian Thread
               martian_found->isDone = false;         // Martian Thread
@@ -775,33 +784,67 @@ int main(int argc, char *argv[])
 #define INCVAL (0.1f)
 #define RESTVAL (0.01f)
 #define UNKNOWN_ERROR (0)
+static void *Func_Thread___1(ALLEGRO_THREAD *thr, void *arg)
+{
+  node *_martianData = arg;
+  /*   al_lock_mutex(_martianData->mutex);
+  int go_to = _martianData->goTo;
+  al_broadcast_cond(_martianData->cond);
+  al_unlock_mutex(_martianData->mutex); */
+
+  while (!al_get_thread_should_stop(thr))
+  {
+    al_lock_mutex(_martianData->mutex);
+    if (_martianData->isActive)
+    {
+      // Logica del laberinto HERE
+      if (_martianData->goTo == 1) // 'U' : 1
+        _martianData->posiY -= INCVAL;
+      else if (_martianData->goTo == 2) // 'R' : 2
+        _martianData->posiX += INCVAL;
+      else if (_martianData->goTo == 3) // 'D' : 3
+        _martianData->posiY += INCVAL;
+      else if (_martianData->goTo == 4) // 'L' : 4
+        _martianData->posiX -= INCVAL;
+      else
+      {
+        printf("\nERROR GO TO : %d\n\n", _martianData->goTo);
+        assert(UNKNOWN_ERROR);
+      }
+      al_rest(RESTVAL);
+    }
+    al_broadcast_cond(_martianData->cond);
+    al_unlock_mutex(_martianData->mutex);
+  }
+  return NULL;
+}
+
 static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg)
 {
   node *_martianData = arg;
   al_lock_mutex(_martianData->mutex);
-  char mw = _martianData->modifyWhich;
+  char mw = _martianData->goTo;
+  //_martianData->ready = true;
   al_broadcast_cond(_martianData->cond);
   al_unlock_mutex(_martianData->mutex);
-  bool active;
-  int ener;
   while (!al_get_thread_should_stop(thr))
   {
-    //  if (_martianData->inProgress == true && _martianData->isDone == false && _martianData->energy != 0)  // && martianTemp->energy != 0
-    al_lock_mutex(_martianData->mutex);
-    active = _martianData->isActive;
-
-    al_unlock_mutex(_martianData->mutex);
-
-    if (active) // && martianTemp->energy != 0
+    if (_martianData->isActive)
     {
       al_lock_mutex(_martianData->mutex);
-      // Logica del laberinto HERE
-      if (mw == 'X')
+      if (_martianData->goTo == 1) // 'U' : 1
+        _martianData->posiY -= INCVAL;
+      else if (_martianData->goTo == 2) // 'R' : 2
         _martianData->posiX += INCVAL;
-      else
+      else if (_martianData->goTo == 3) // 'D' : 3
         _martianData->posiY += INCVAL;
-      /* else
-        assert(UNKNOWN_ERROR); */
+      else if (_martianData->goTo == 4) // 'L' : 4
+        _martianData->posiX -= INCVAL;
+      else
+      {
+        printf("\nERROR GO TO : %d\n\n", _martianData->goTo);
+        assert(UNKNOWN_ERROR);
+      }
       al_unlock_mutex(_martianData->mutex);
       al_rest(RESTVAL);
     }
