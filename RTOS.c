@@ -14,8 +14,8 @@ typedef struct node //struct node
 {
   ALLEGRO_MUTEX *mutex;
   ALLEGRO_COND *cond;
-  float posiX;
-  float posiY;
+  int posiX;
+  int posiY;
   int energy;
   int static_energy;
   int period;
@@ -459,6 +459,7 @@ int parameterAlgorithm(int argc, char *argv[])
     else if (!strcmp(argv[2], "Auto"))
     {
       __mode = 1;
+      __start_auto = 1;
       return 1;
     }
     else
@@ -621,8 +622,29 @@ int main(int argc, char *argv[])
               printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d \n", sGame, martianID, martian_found->energy);
 
               addLast(&head_report, martianID);
-              al_lock_mutex(martian_found->mutex);   // Lock Mutex
-              martian_found->goTo = 2;               // Martian Movement // U: Up - D:Down - R: Right - L:Left
+              al_lock_mutex(martian_found->mutex);                                  // Lock Mutex
+              if (MAZE_MATRIX[martian_found->posiY - 1][martian_found->posiX] == 1) // 1 : Espacio para caminar
+              {
+                martian_found->goTo = 1; // Martian Movement // U: Up - D:Down - R: Right - L:Left
+              }
+              else if (MAZE_MATRIX[martian_found->posiY][martian_found->posiX + 1] == 1) // 1 : Espacio para caminar
+              {
+                martian_found->goTo = 2; // Martian Movement // U: Up - D:Down - R: Right - L:Left
+              }
+              else if (MAZE_MATRIX[martian_found->posiY + 1][martian_found->posiX] == 1) // 1 : Espacio para caminar
+              {
+                martian_found->goTo = 3; // Martian Movement // U: Up - D:Down - R: Right - L:Left
+              }
+              else if (MAZE_MATRIX[martian_found->posiY][martian_found->posiX - 1] == 1) // 1 : Espacio para caminar
+              {
+                martian_found->goTo = 4; // Martian Movement // U: Up - D:Down - R: Right - L:Left
+              }
+              else
+              {
+                martian_found->goTo = 666;
+              }
+
+              //martian_found->goTo = 2;               // Martian Movement // U: Up - D:Down - R: Right - L:Left
               martian_found->inProgress = true;      // Martian Thread
               martian_found->isActive = true;        // Martian Thread
               martian_found->isDone = false;         // Martian Thread
@@ -782,43 +804,9 @@ int main(int argc, char *argv[])
 }
 
 #define INCVAL (0.1f)
+int st = 1;
 #define RESTVAL (0.01f)
 #define UNKNOWN_ERROR (0)
-static void *Func_Thread___1(ALLEGRO_THREAD *thr, void *arg)
-{
-  node *_martianData = arg;
-  /*   al_lock_mutex(_martianData->mutex);
-  int go_to = _martianData->goTo;
-  al_broadcast_cond(_martianData->cond);
-  al_unlock_mutex(_martianData->mutex); */
-
-  while (!al_get_thread_should_stop(thr))
-  {
-    al_lock_mutex(_martianData->mutex);
-    if (_martianData->isActive)
-    {
-      // Logica del laberinto HERE
-      if (_martianData->goTo == 1) // 'U' : 1
-        _martianData->posiY -= INCVAL;
-      else if (_martianData->goTo == 2) // 'R' : 2
-        _martianData->posiX += INCVAL;
-      else if (_martianData->goTo == 3) // 'D' : 3
-        _martianData->posiY += INCVAL;
-      else if (_martianData->goTo == 4) // 'L' : 4
-        _martianData->posiX -= INCVAL;
-      else
-      {
-        printf("\nERROR GO TO : %d\n\n", _martianData->goTo);
-        assert(UNKNOWN_ERROR);
-      }
-      al_rest(RESTVAL);
-    }
-    al_broadcast_cond(_martianData->cond);
-    al_unlock_mutex(_martianData->mutex);
-  }
-  return NULL;
-}
-
 static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg)
 {
   node *_martianData = arg;
@@ -833,13 +821,13 @@ static void *Func_Thread(ALLEGRO_THREAD *thr, void *arg)
     {
       al_lock_mutex(_martianData->mutex);
       if (_martianData->goTo == 1) // 'U' : 1
-        _martianData->posiY -= INCVAL;
+        _martianData->posiY -= st;
       else if (_martianData->goTo == 2) // 'R' : 2
-        _martianData->posiX += INCVAL;
+        _martianData->posiX += st;
       else if (_martianData->goTo == 3) // 'D' : 3
-        _martianData->posiY += INCVAL;
+        _martianData->posiY += st;
       else if (_martianData->goTo == 4) // 'L' : 4
-        _martianData->posiX -= INCVAL;
+        _martianData->posiX -= st;
       else
       {
         printf("\nERROR GO TO : %d\n\n", _martianData->goTo);
