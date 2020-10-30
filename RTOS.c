@@ -15,9 +15,10 @@ typedef struct node //struct node
   ALLEGRO_COND *cond;
   float posiX;
   float posiY;
-  int period;
   int energy;
   int static_energy;
+  int period;
+  int static_period;
   int id;
   char modifyWhich; // which variable to modify, 'X' or 'Y'
   bool isReady_New;
@@ -43,6 +44,7 @@ struct report *head_report = NULL;
         .posiX = 0,           \
         .posiY = 0,           \
         .period = 0,          \
+        .static_period = 0,   \
         .energy = 0,          \
         .static_energy = 0,   \
         .id = 0,              \
@@ -98,7 +100,7 @@ code HandleEvent(ALLEGRO_EVENT ev);
 void endGame();
 void freeMartians();
 void clearListMartians();
-float formuleRM();
+float formuleU();
 // ---------------------------------------------------------------------------
 // Header of REDRAW HANDLER Module
 // ---------------------------------------------------------------------------
@@ -251,6 +253,7 @@ void addMartian(int energy, int period)
   link->energy = energy;
   link->static_energy = energy;
   link->period = period;
+  link->static_period = period;
   link->id = length() + 1;
   link->isReady_New = false;
   link->inProgress = false;
@@ -301,13 +304,13 @@ struct node *findEDF_Martian()
     return NULL;
 
   node *current = head;       //start from the first link
-  int period_1 = 9999;        // Defaul Value
+  int energy_1 = 9999;        // Defaul Value
   node *martianTemp = head;   // Header List
   while (martianTemp != NULL) //start from the beginning
   {
-    if (martianTemp->period <= period_1 && martianTemp->isDone == false) // martianTemp->isReady_New = true;
+    if (martianTemp->energy <= energy_1 && martianTemp->isDone == 0) // martianTemp->isReady_New = true;
     {
-      period_1 = martianTemp->period;
+      energy_1 = martianTemp->static_energy;
       current = martianTemp;
     }
     martianTemp = martianTemp->next; // Follow martian
@@ -341,18 +344,16 @@ struct node *findRM_Martian()
   return current; //if energy found, return the current Link
 }
 
-void resetPeriodTime(int sGame)
+void resetEnergy(int sGame)
 {
   if (head != NULL)
   {
     node *martianTemp = head; // Header List
     int residuo = 0;
-    int all_news = 0;
     puts("");
     while (martianTemp != NULL) //start from the beginning
     {
       residuo = sGame % martianTemp->period;
-      all_news = all_news + residuo;
       printf("%d. E:%d P:%d \tisDone: %d isReady_New: %d inProgress: %d  isActive: %d  \tResiduo : %d ",
              martianTemp->id,
              martianTemp->energy,
@@ -366,7 +367,6 @@ void resetPeriodTime(int sGame)
       if (residuo == 0)
       {
         al_lock_mutex(martianTemp->mutex); // Lock Mutex
-
         martianTemp->isDone = false;
         martianTemp->isReady_New = true;
         martianTemp->inProgress = false;
@@ -380,16 +380,6 @@ void resetPeriodTime(int sGame)
 
       martianTemp = martianTemp->next; // Follow martian
     }
-    if (all_news == 0)
-    {
-      is_all_news = 1; // true
-                       // printf("\n^all_news^ : %d", all_news);
-      strncpy(energyLine, "", 10);
-    }
-    else
-    {
-      is_all_news = 0; // false
-    }
   }
 }
 
@@ -400,7 +390,7 @@ void endGame()
 // ---------------------------------------------------------------------------
 // Implementation of MAIN Module
 // ---------------------------------------------------------------------------
-float formuleRM()
+float formuleU()
 {
   int Ci = 0;
   int Pi = 0;
@@ -530,20 +520,28 @@ int main(int argc, char *argv[])
 
   char ch = '>';
   int current_seconds = 0;
-  int preview_energy = 0;
   float u = 0;
 
   ALLEGRO_THREAD *current_thread = NULL;
-  node *foundLessEM = NULL;
+  node *martian_found = NULL;
 
-  /* TEST */
-  addMartian(1, 6);
+  /* RM */
+  /*   addMartian(1, 6);
   addMartian(2, 9);
-  addMartian(6, 18);
+  addMartian(6, 18); */
 
   /*   addMartian(1, 3);
   addMartian(2, 5);
   addMartian(2, 9); */
+
+  // EDF
+  /*   addMartian(1, 4);
+  addMartian(2, 6);
+  addMartian(3, 8); */
+
+  addMartian(3, 6);
+  addMartian(4, 9);
+
   __start_auto = 1;
   /* END TEST */
 
@@ -567,31 +565,24 @@ int main(int argc, char *argv[])
 
           if (length() != 0) // valida si existe un hilo anterior (para detenerlo)
           {
-
             stopAllThread();
 
             if (__algorithm == 0)
-            {
-              foundLessEM = findRM_Martian();
-            }
+              martian_found = findRM_Martian();
             else
-            {
-              foundLessEM = findEDF_Martian();
-            }
+              martian_found = findEDF_Martian();
 
-            if (foundLessEM != NULL)
+            if (martian_found != NULL)
             {
-              martianID = foundLessEM->id;
-
-              preview_energy = foundLessEM->energy;
+              martianID = martian_found->id;
               addLast(&head_report, martianID);
-              al_lock_mutex(foundLessEM->mutex);   // Lock Mutex
-              foundLessEM->modifyWhich = 'X';      // Martian Movement
-              foundLessEM->inProgress = true;      // Martian Thread
-              foundLessEM->isActive = true;        // Martian Thread
-              foundLessEM->isDone = false;         // Martian Thread
-              foundLessEM->isReady_New = false;    // Martian in used
-              al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
+              al_lock_mutex(martian_found->mutex);   // Lock Mutex
+              martian_found->modifyWhich = 'X';      // Martian Movement
+              martian_found->inProgress = true;      // Martian Thread
+              martian_found->isActive = true;        // Martian Thread
+              martian_found->isDone = false;         // Martian Thread
+              martian_found->isReady_New = false;    // Martian in used
+              al_unlock_mutex(martian_found->mutex); // UnLock Mutex
 
               if (preview_martianID != martianID)
               {
@@ -603,24 +594,27 @@ int main(int argc, char *argv[])
               {
                 strncat(energyLine, &ch, 1);
               }
-              al_lock_mutex(foundLessEM->mutex);   // Lock Mutex
-              foundLessEM->energy--;               // Martian Movement
-              al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
+              puts("----------------------------------------------------------------------------------------------------------------");
+              printf("\nCURRENT - (%d) s \t\tFind ID : %d \t\tEnergy : %d \n", sGame, martianID, martian_found->energy);
 
-              printf("\n(%d) s \t\tFind ID : %d \t\tEnergy : %d -> %d \n", sGame, martianID, foundLessEM->energy + 1, foundLessEM->energy);
+              al_lock_mutex(martian_found->mutex);   // Lock Mutex
+              martian_found->energy--;               // Martian Movement
+              al_unlock_mutex(martian_found->mutex); // UnLock Mutex
 
-              al_lock_mutex(foundLessEM->mutex); // Lock Mutex
-              if (foundLessEM->energy == 0)
+              printf("\nUPDATED - (%d) s \t\tFind ID : %d \t\tEnergy : %d \n", sGame, martianID, martian_found->energy);
+
+              al_lock_mutex(martian_found->mutex); // Lock Mutex
+
+              if (martian_found->energy == 0)
               {
-                foundLessEM->isDone = true;      // Martian Thread
-                foundLessEM->inProgress = false; // Martian Thread
+                martian_found->isDone = true;      // Martian Thread
+                martian_found->inProgress = false; // Martian Thread
               }
               else
               {
-                foundLessEM->inProgress = true; // Martian Thread
+                martian_found->inProgress = true; // Martian Thread
               }
-
-              al_unlock_mutex(foundLessEM->mutex); // UnLock Mutex
+              al_unlock_mutex(martian_found->mutex); // UnLock Mutex
             }
             else
             {
@@ -629,7 +623,7 @@ int main(int argc, char *argv[])
               martianID = 0;
             }
 
-            resetPeriodTime(sGame);
+            resetEnergy(sGame);
           }
         }
         renderListMartians();
